@@ -1,3 +1,4 @@
 node_modules/
 *query_motifs.txt
 *tomtom.tsv
+*tomtom.xml

@@ -3,6 +3,8 @@ const app = express();
 
 function queryCreator(motif) {
     const fs = require("fs");
+    motif = motif.toUpperCase();
+
     const motifsMap = {
         'A': '1.000000 0.000000 0.000000 0.000000',
         'T': '0.000000 0.000000 0.000000 1.000000',
@@ -20,20 +22,25 @@ function queryCreator(motif) {
         'B': '0.000000 0.333333 0.333333 0.333333',
         'N': '0.250000 0.250000 0.250000 0.250000'
     };
-    const heder = "MEME version 4\n\nALPHABET= ACGT\n\nstrands: + -\n\nBackground letter frequencies (from unknown source):\nA 0.250 C 0.250 G 0.250 T 0.250\n\nMOTIF 1 " + motif.toUpperCase() + "\n\nletter-probability matrix: alength= 4 w= 8 nsites= 1 E= 0e+0";
+    const heder = "MEME version 4\n\nALPHABET= ACGT\n\nstrands: + -\n\nBackground letter frequencies (from unknown source):\nA 0.250 C 0.250 G 0.250 T 0.250\n\nMOTIF 1 " + motif + "\n\nletter-probability matrix: alength= 4 w= 8 nsites= 1 E= 0e+0";
+    let dir = `./${motif}`;
     let matrix = "";
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
 
     for (let i = 0; i < motif.length; i++) {
         matrix += "\n" + motifsMap[motif[i]];
     }
 
-    fs.writeFileSync("query_motifs.txt", heder + matrix);
+    fs.writeFileSync(`${dir}/query_motifs.txt`, heder + matrix);
 }
 
-function requestInTomtom() {
+function requestInTomtom(motif) {
     const { exec } = require("child_process");
 
-    exec("./src/tomtom -no-ssc -oc testing123 -verbosity 1 -min-overlap 5 -mi 1 -dist pearson -evalue -thresh 10.0 -time 300 query_motifs db/JASPAR_2020.meme", (error, stdout, stderr) => {
+    exec(`./src/tomtom -no-ssc -oc testing123 -verbosity 1 -min-overlap 5 -mi 1 -dist pearson -evalue -thresh 10.0 -time 300 ${motif.toUpperCase()}/query_motifs db/JASPAR_2020.meme`, (error, stdout, stderr) => {
         if (error) {
             console.log(`error: ${error.message}`);
             return;
@@ -69,21 +76,77 @@ function tsvJSON(inputTsv) {
     });
 }
 
-function parseTomtom() {
-    const fs = require("fs");
-    let fileContent = fs.readFileSync("tomtom.tsv", "utf8");
+function xmlJSON(inputXml) {
+    if (!inputXml) {
+        console.log("error: not found tomtom.xml");
+        return;
+    }
 
-    return tsvJSON(fileContent);
+    const xml2js = require('xml2js');
+    let json;
+
+    xml2js.parseString(inputXml, (err, result) => {
+        if (err) {
+            throw err;
+        }
+
+        json = JSON.stringify(result, null, 4);
+    });
+
+    return json;
 }
 
-app.use("/", function (request, response) {
+function parseTomtom(motif) {
+    const fs = require("fs");
+    motif = motif.toUpperCase();
+    let fileTsv = tsvJSON(fs.readFileSync(`${motif}/tomtom.tsv`, "utf8"));
+    let fileXml = xmlJSON(fs.readFileSync(`${motif}/tomtom.xml`, "utf8"));
+
+    return "{tsv: " + JSON.stringify(fileTsv, null, 4) + ", xml: " + fileXml + "}";
+}
+
+function deleteDir(path) {
+    const fs = require("fs");
+
+    if (fs.existsSync(path)) {
+        fs.readdirSync(path).forEach(function (file) {
+            let curPath = path + "/" + file;
+
+            if (fs.lstatSync(curPath).isDirectory()) {
+                deleteFolderRecursive(curPath);
+            } else {
+                fs.unlinkSync(curPath);
+            }
+        });
+
+        fs.rmdirSync(path);
+    }
+};
+
+app.use("/data", function (request, response) {
+    const fs = require('fs');
     let motif = request.query.motif;
+    let tsv = false;
+    let xml = false;
 
     queryCreator(motif); //создали query_motifs.txt
-    requestInTomtom(); //отправили запрос, получили tomtom.tsv
+    requestInTomtom(motif); //отправили запрос, получили tomtom.tsv, tomtom.xml
 
-    let tomtom = parseTomtom(); //получили JSON из tomtom.tsv
-    response.send(tomtom); //отправляем JSON на фронт
+    let watcher = fs.watch(`${motif}`, function (event, filename) {
+        if (filename === 'tomtom.tsv') {
+            tsv = true;
+        }
+        if (filename === 'tomtom.xml') {
+            xml = true;
+        }
+        if (xml && tsv) {
+            console.log('kjhbjhgbjbkj')
+            watcher.close();
+            let tomtom = parseTomtom(motif); //получили JSON из tomtom.tsv
+            response.send(tomtom); //отправляем JSON на фронт
+            deleteDir(motif.toUpperCase()); //удаляем папку после отправки ответа
+        }
+    });
 });
 
 app.listen(3000);
