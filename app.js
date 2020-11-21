@@ -1,152 +1,165 @@
-const express = require("express");
-const app = express();
+let http = require('http');
+let Static = require('node-static');
+let WebSocketServer = new require('ws');
 
-function queryCreator(motif) {
-    const fs = require("fs");
-    motif = motif.toUpperCase();
+// подключенные клиенты
+let clients = {};
 
-    const motifsMap = {
-        'A': '1.000000 0.000000 0.000000 0.000000',
-        'T': '0.000000 0.000000 0.000000 1.000000',
-        'G': '0.000000 0.000000 1.000000 0.000000',
-        'C': '0.000000 1.000000 0.000000 0.000000',
-        'W': '0.500000 0.000000 0.000000 0.500000',
-        'R': '0.500000 0.000000 0.500000 0.000000',
-        'K': '0.000000 0.000000 0.500000 0.500000',
-        'D': '0.333333 0.000000 0.333333 0.333333',
-        'M': '0.500000 0.500000 0.000000 0.000000',
-        'Y': '0.000000 0.500000 0.000000 0.500000',
-        'H': '0.333333 0.333333 0.000000 0.333333',
-        'S': '0.000000 0.500000 0.500000 0.000000',
-        'V': '0.333333 0.333333 0.333333 0.000000',
-        'B': '0.000000 0.333333 0.333333 0.333333',
-        'N': '0.250000 0.250000 0.250000 0.250000'
-    };
-    const heder = "MEME version 4\n\nALPHABET= ACGT\n\nstrands: + -\n\nBackground letter frequencies (from unknown source):\nA 0.250 C 0.250 G 0.250 T 0.250\n\nMOTIF 1 " + motif + "\n\nletter-probability matrix: alength= 4 w= 8 nsites= 1 E= 0e+0";
-    let dir = `./${motif}`;
-    let matrix = "";
+function dirCreator(dir) {
+  console.log("dirCreator: " + dir);
+  const fs = require("fs");
 
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir);
-    }
-
-    for (let i = 0; i < motif.length; i++) {
-        matrix += "\n" + motifsMap[motif[i]];
-    }
-
-    fs.writeFileSync(`${dir}/query_motifs.txt`, heder + matrix);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir);
+  }
 }
 
-function requestInTomtom(motif) {
-    const { exec } = require("child_process");
+function execProcess(command, callback) {
+  console.log("execProcess: ", command);
+  let process = require("child_process").exec(command);
 
-    exec(`./src/tomtom -no-ssc -oc testing123 -verbosity 1 -min-overlap 5 -mi 1 -dist pearson -evalue -thresh 10.0 -time 300 ${motif.toUpperCase()}/query_motifs db/JASPAR_2020.meme`, (error, stdout, stderr) => {
-        if (error) {
-            console.log(`error: ${error.message}`);
-            return;
-        }
+  process.on('exit', () => {
+    console.log("process exited: ", command);
+    if (callback) {
+      console.log("running callback: ");
+      callback();
+    }
+  });
+}
 
-        if (stderr) {
-            console.log(`stderr: ${stderr}`);
-            return;
-        }
+function queryCreator(motif, dir) {
+  console.log("queryCreator: " + dir);
+  let str = `../meme-5.2.0/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
+  execProcess(str, () => { console.log("старт requestInTomtom"); requestInTomtom(dir) });
+}
 
-        console.log(`stdout: ${stdout}`);
-    });
+function requestInTomtom(dir) {
+  console.log("функция requestInTomtom запустилась ", dir);
+  const fs = require("fs");
+  let file = false;
+  console.log("requestInTomtom: " + dir);
+  let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
+  execProcess(str, () => {
+    endJob(dir);
+    console.log("finished tomtom")
+  });
+  console.log("создаем tsv и xml файлы");
+  file = true;
 }
 
 function tsvJSON(inputTsv) {
-    if (!inputTsv) {
-        console.log("error: not found tomtom.tsv");
-        return;
-    }
+  if (!inputTsv) {
+    console.log("error: not found tomtom.tsv");
+    return;
+  }
 
-    let tsv = inputTsv.slice(0, inputTsv.indexOf("#") - 2);
-    let lines = tsv.split('\n');
-    let headers = lines.shift().split('\t');
+  let tsv = inputTsv.slice(0, inputTsv.indexOf("#") - 2);
+  let lines = tsv.split('\n');
+  let headers = lines.shift().split('\t');
 
-    return lines.map(line => {
-        let data = line.split('\t');
+  return lines.map(line => {
+    let data = line.split('\t');
 
-        return headers.reduce((obj, nextKey, index) => {
-            obj[nextKey] = data[index];
+    return headers.reduce((obj, nextKey, index) => {
+      obj[nextKey] = data[index];
 
-            return obj;
-        }, {});
-    });
+      return obj;
+    }, {});
+  });
 }
 
 function xmlJSON(inputXml) {
-    if (!inputXml) {
-        console.log("error: not found tomtom.xml");
-        return;
+  const xml2js = require('xml2js');
+  let json;
+
+  xml2js.parseString(inputXml, (err, result) => {
+    if (err) {
+      throw err;
     }
 
-    const xml2js = require('xml2js');
-    let json;
+    json = JSON.stringify(result, null, 4);
+  });
 
-    xml2js.parseString(inputXml, (err, result) => {
-        if (err) {
-            throw err;
-        }
-
-        json = JSON.stringify(result, null, 4);
-    });
-
-    return json;
+  return json;
 }
 
-function parseTomtom(motif) {
-    const fs = require("fs");
-    motif = motif.toUpperCase();
-    let fileTsv = tsvJSON(fs.readFileSync(`${motif}/tomtom.tsv`, "utf8"));
-    let fileXml = xmlJSON(fs.readFileSync(`${motif}/tomtom.xml`, "utf8"));
+function parseTomtom(dir) {
+  const fs = require("fs");
+  let fileTsv = tsvJSON(fs.readFileSync(`${dir}/tomtom.tsv`, "utf8"));
+  let fileXml = xmlJSON(fs.readFileSync(`${dir}/tomtom.xml`, "utf8"));
 
-    return "{tsv: " + JSON.stringify(fileTsv, null, 4) + ", xml: " + fileXml + "}";
+  return '{"tsv": ' + JSON.stringify(fileTsv, null, 4) + ', "xml": ' + fileXml + '}';
 }
 
 function deleteDir(path) {
-    const fs = require("fs");
+  const fs = require("fs");
 
-    if (fs.existsSync(path)) {
-        fs.readdirSync(path).forEach(function (file) {
-            let curPath = path + "/" + file;
+  if (fs.existsSync(path)) {
+    fs.readdirSync(path).forEach(function (file) {
+      let curPath = path + "/" + file;
 
-            if (fs.lstatSync(curPath).isDirectory()) {
-                deleteFolderRecursive(curPath);
-            } else {
-                fs.unlinkSync(curPath);
-            }
-        });
+      if (fs.lstatSync(curPath).isDirectory()) {
+        deleteFolderRecursive(curPath);
+      } else {
+        fs.unlinkSync(curPath);
+      }
+    });
 
-        fs.rmdirSync(path);
-    }
+    fs.rmdirSync(path);
+  }
 };
 
-app.use("/data", function (request, response) {
-    const fs = require('fs');
-    let motif = request.query.motif;
-    let tsv = false;
-    let xml = false;
+function makeRandom(liters) {
+  let text = "";
+  let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-    queryCreator(motif); //создали query_motifs.txt
-    requestInTomtom(motif); //отправили запрос, получили tomtom.tsv, tomtom.xml
+  for (let i = 0; i < liters; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
 
-    let watcher = fs.watch(`${motif}`, function (event, filename) {
-        if (filename === 'tomtom.tsv') {
-            tsv = true;
-        }
-        if (filename === 'tomtom.xml') {
-            xml = true;
-        }
-        if (xml && tsv) {
-            console.log('kjhbjhgbjbkj')
-            watcher.close();
-            let tomtom = parseTomtom(motif); //получили JSON из tomtom.tsv
-            response.send(tomtom); //отправляем JSON на фронт
-            deleteDir(motif.toUpperCase()); //удаляем папку после отправки ответа
-        }
-    });
+  return text;
+}
+
+function startJob(motifs, id) {
+  let dir = '../meme-5.2.0/' + id;
+
+  dirCreator(dir); //создали папку
+  queryCreator(motifs, dir); //создали query_motifs.txt
+  //requestInTomtom(motifs, dir); //отправили запрос, получили tomtom.tsv, tomtom.xml
+}
+
+function endJob(dir) {
+  let tomtom = parseTomtom(dir); //получили JSON из tomtom.tsv
+  console.log("endJob: начало");
+
+  for (let key in clients) { //отправляем JSON на фронт
+    if ('../meme-5.2.0/' + key === dir) {
+      console.log("endJob: отправляем сообщение на фронт");
+      clients[key].send(tomtom);
+    }
+  }
+
+  deleteDir(dir); //удаляем папку после отправки ответа
+}
+
+// WebSocket-сервер на порту 3000
+let webSocketServer = new WebSocketServer.Server({ port: 3000 });
+webSocketServer.on('connection', function (ws) {
+
+  let id = makeRandom(20);
+  clients[id] = ws;
+
+  console.log("новое соединение " + id);
+
+  ws.on('message', function (message) {
+    startJob(message, id);
+  });
+
+  ws.on('close', function () {
+    console.log('соединение закрыто ' + id);
+    delete clients[id];
+  });
+
 });
 
-app.listen(3000);
+console.log("Сервер запущен");
