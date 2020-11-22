@@ -1,27 +1,38 @@
 if (!window.WebSocket) {
-	document.body.innerHTML = 'WebSocket в этом браузере не поддерживается.';
+  document.body.innerHTML = 'WebSocket в этом браузере не поддерживается.';
 }
 
 // создать подключение
-var socket = new WebSocket("ws://52.87.255.213:3000");
+let socket = new WebSocket("ws://54.157.128.148:3000");
+
+function security(str) {
+  return /^[atgcwrkdmyhsvbnATGCWRKDMYHSVBN ]+$/.test(str);
+}
 
 // отправить сообщение из формы publish
-document.forms.publish.onsubmit = function() {
-  var outgoingMessage = this.message.value;
+document.forms.publish.onsubmit = function () {
+  let outgoingMessage = this.message.value;
+  let securityTest = security(outgoingMessage);
 
-  socket.send(outgoingMessage);
+  if(securityTest) {
+    socket.send(outgoingMessage);
+  } else {
+    alert("а вот хер!");
+  }
+  
   return false;
 };
 
 // обработчик входящих сообщений
-socket.onmessage = function(event) {
-  var incomingMessage = event.data;
-  showMessage(incomingMessage); 
+socket.onmessage = function (event) {
+  let incomingMessage = event.data;
+  showMessage(incomingMessage);
+  console.log(incomingMessage);
 };
 
 // показать сообщение в div#subscribe
 function showMessage(message) {
-  var messageElem = document.createElement('div');
+  let messageElem = document.createElement('div');
   messageElem.appendChild(document.createTextNode(message));
   document.getElementById('subscribe').appendChild(messageElem);
 }
