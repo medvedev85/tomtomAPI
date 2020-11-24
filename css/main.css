@@ -1,0 +1,286 @@
+/* Page layout */
+
+.main-head {
+  grid-area: header;
+}
+
+.content {
+  grid-area: content;
+}
+
+.main-nav {
+  grid-area: nav;
+}
+
+.side {
+  grid-area: sidebar;
+}
+
+.main-footer {
+  grid-area: footer;
+}
+
+.wrapper {
+  display: grid;
+  grid-gap: 10px;
+  grid-template-areas:
+    "header"
+    "nav"
+    "content"
+    "sidebar"
+    "footer";
+}
+
+#paginator {
+  margin-top: 30px;
+}
+
+@media (min-width: 500px) {
+  .wrapper {
+    grid-template-columns: 1fr 3fr;
+    grid-template-areas:
+      "header  header"
+      "nav     nav"
+      "sidebar content"
+      "footer  footer";
+  }
+  nav ul {
+    display: flex;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 700px) {
+  .wrapper {
+    grid-template-columns: 1fr 4fr 1fr;
+    grid-template-areas:
+      "header header  header"
+      "nav    content sidebar"
+      "nav    content sidebar"
+      "footer footer  footer"
+   }
+   nav ul {
+     flex-direction: column;
+   }
+   .main-head {
+     grid-column: 1 / 3;
+   }
+   .content {
+       padding-left: 4em;
+   }
+}
+
+#logoName {
+    font-family: 'Tenali Ramakrishna', sans-serif;
+    font-size: 2em;
+    margin-top: 0.75em;
+    margin-left: 0.75em;
+    margin-bottom: -0.5em;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+.content table {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+.task-item {
+    font-size: 0.8em;
+}
+
+.expand-section {
+    display: block;
+    text-decoration: underline;
+    text-decoration-color: blue;
+    width: 100%;
+    color: blue;
+    padding-left: 0.7em;
+}
+
+textarea.expandable-content {
+    max-width: 400px;
+}
+
+.expandable-content {
+  max-height: 0;
+  margin-top: 10px;
+  transition: max-height 0.2s ease-out;
+  display: none;
+}
+
+.param-list {
+  display: grid;
+  padding: 1em;
+  background: #f9f9f9;
+  border: 1px solid #c1c1c1;
+  margin: 2rem auto 0 0;
+  max-width: 600px;
+}
+
+.param-list label {
+  padding: 0.5em 0.5em 0.5em 0;
+}
+
+.param-list input {
+  padding: 0.7em;
+  margin-bottom: 0.5rem;
+  background-color: lightyellow;
+}
+
+.param-list a {
+  padding: 0.7em;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 400px) {
+  .param-list {
+    overflow: hidden;
+    grid-gap: 16px;
+    grid-template-columns: 200px 1fr;
+  }
+
+  .param-list label {
+    text-align: right;
+    grid-column: 1 / 2;
+  }
+
+  .param-list a, .param-list input {
+    grid-column: 2 / 3;
+  }
+
+  .param-list .subsection-title {
+      grid-column: 1 / 3;
+  }
+}
+
+.subsection-title {
+    color: lightgrey;
+    font-size: 1.2em;
+    text-align: center;
+    font-weight: bold;
+    display: block;
+}
+
+.property-line {
+    display: grid;
+    margin: 2rem auto 0 0;
+}
+
+.property-line label {
+    margin-top: 1px;
+}
+
+.property-line input {
+  border: none;
+  outline: none;
+}
+
+@media (min-width: 400px) {
+  .property-line {
+    overflow: hidden;
+    grid-gap: 8px;
+    grid-template-columns: 80px 1fr;
+  }
+
+  .property-line label {
+    grid-column: 1 / 2;
+  }
+
+  .property-line input {
+    grid-column: 2 / 3;
+  }
+}
+.button-success,
+.button-error,
+.button-warning,
+.button-secondary {
+    color: white;
+    border-radius: 4px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.button-success {
+    background: rgb(28, 184, 65);
+}
+
+.button-secondary {
+    background: rgb(66, 184, 221);
+}
+
+.button-warning {
+    background-color: rgb(223, 117, 20);
+}
+
+.small-button {
+    font-size: 70%;
+}
+
+.no-hover {
+    pointer-events: none;
+}
+
+.button-error {
+    background: rgb(202, 60, 60);
+}
+
+article .progress-bar {
+    max-width: 640px;
+}
+
+.progress-bar {
+    text-align: center;
+    width: 100%;
+    background-color: #e0e0e0;
+    padding: 3px;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .2);
+}
+.progress-bar:before {
+  content: attr(data-label);
+  vertical-align: 0;
+
+  /*Position text over the progress bar */
+  position:absolute;
+  left:0;
+  right:0;
+}
+.progress-bar-fill {
+    display: block;
+    height: 22px;
+    background-color: #659cef;
+    border-radius: 3px;
+    transition: width 500ms ease-in-out;
+}
+
+.bottom-button {
+    margin-top: 20px;
+    margin: 2rem auto 0 0;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltipimage {
+    max-width:350px;
+    padding:15px;
+    min-height:100px;
+    background:#fff;
+    visibility: hidden;
+    border: 1px solid black;
+    color: #000;
+    text-align: center;
+    border-radius: 6px;
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+}
+
+.tooltip:hover .tooltipimage {
+    visibility: visible;
+}

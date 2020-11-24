@@ -37,7 +37,7 @@ function requestInTomtom(dir) {
     console.log("функция requestInTomtom запустилась ", dir);
     const fs = require("fs");
     console.log("requestInTomtom: " + dir);
-    let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
+    let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
     execProcess(str, () => {
         endJob(dir);
         console.log("finished tomtom")
@@ -119,7 +119,7 @@ function makeRandom(liters) {
 }
 
 function startJob(motifs, id) {
-    let dir = '../meme-5.2.0/' + makeRandom(20);
+    let dir = '../meme-5.2.0/apiDir/' + makeRandom(20);
     calls[id].push(dir);
 
     console.log("new dir: " + calls[id]);

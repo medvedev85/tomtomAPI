@@ -1,21 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-  <meta charset="utf-8">
-  <script src="browser.js"></script>
+    <meta charset="UTF-8">
+    <title>Locations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tenali+Ramakrishna&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/form.css">
+    <script src="browser.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css"
+        integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47" crossorigin="anonymous">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
+
 <body>
+    <span class="wrapper">
+        <header class="main-head">
+            <div id="logoName">Motif finder</div>
+        </header>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="https://frfry.com/motif_finder_web">Home</a></li>
+                <li><a href="https://frfry.com/motif_finder_web/tasks">Tasks list</a></li>
+            </ul>
+        </nav>
 
-<!-- форма для отправки сообщений -->
-<form name="publish">
-  <input type="text" name="message"/>
-  <input type="submit" value="Отправить"/>
-</form>
+        <article class="content">
+            <table class="pure-table pure-table-striped">
+                <thead>
+                    <td>
+                        <span>including motifs: </span>
+                        <select id="createMotifs" name="createMotifs">
+                            <option value="1" selected>1</option>
+                            <option value="10">10</option>
+                            <option value="100">100</option>
+                            <option value="1000">1000</option>
+                            <option value="10000">10000</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button class="tablinks" onclick="start()">Go</button>
+                    </td>
+                </thead>
+            </table>
+            <table class="pure-table">
+                <thead>
+                    <tr>
+                        <th nowrap>Query_ID</th>
+                        <th nowrap>Target_ID</th>
+                        <th nowrap>Optimal_offset</th>
+                        <th nowrap>p-value</th>
+                        <th nowrap>E-value</th>
+                        <th nowrap>q-value</th>
+                        <th nowrap>Overlap</th>
+                        <th nowrap>Query_consensus</th>
+                        <th nowrap>Target_consensus</th>
+                        <th nowrap>Orientation</th>
+                    </tr>
+                </thead>
+                <tbody id="table_body">
+                </tbody>
+            </table>
 
-<!-- здесь будут появляться входящие сообщения -->
-<div id="subscribe"></div>
+        </article>
+        <aside class="side">
 
-
+        </aside>
+        <footer class="main-footer">NSU 2020 <a href="mailto:andrey.bocharnikov@gmail.com">E-mail</a></footer>
+    </span>
 
 </body>
+
 </html>
