@@ -3,6 +3,7 @@ if (!window.WebSocket) {
 }
 
 let socket = new WebSocket("ws://54.157.128.148:3000");
+let network = false;
 
 function security(str) {
   return /^[atgcwrkdmyhsvbnATGCWRKDMYHSVBN ]+$/.test(str);
@@ -29,10 +30,14 @@ function createMotifStr(amt) {
   return str;
 }
 
-function sendMessage(str) {
-  let securityTest = security(str);
+function sendMessage(str, sec) {
+  if (!network) {
+    return alert("подождите, соединение с сервером устанавливается");
+  }
+//ИСПРАВИТЬ ПРОВЕРКУ БЕЗОПАСНОСТИ!!!!!
+  let securityTest = true;//security(str);
 
-  if (securityTest) {
+  if (securityTest || sec) {
     socket.send(str);
   } else {
     alert("а вот хер!");
@@ -44,16 +49,56 @@ function start() {
   let motifs = createMotifStr(includingMotifs);
 
   for (let i = 0; i < includingMotifs; i++) {
-    sendMessage(motifs[i]);
+    let str = `{"announce":"tomtom", "msg":"${motifs}"}`
+    sendMessage(str);
   }
 }
 
 // обработчик входящих сообщений
 socket.onmessage = function (event) {
   let incomingMessage = JSON.parse(event.data);
-  
-  fillTable(incomingMessage);
+  let announce = incomingMessage["announce"];
+  let msg = incomingMessage["msg"];
+
+  switch (announce) {
+    case "error":
+      alert(msg);
+      break;
+    case "tomtom":
+      fillTable(msg);
+      break;
+    case "cookie":
+      cookieWriter("name", msg);
+      console.log("new cookie" + msg);
+      break;
+    case "session":
+      console.log("запрос от сервера на установку соединения");
+      network = true;
+      getSession();
+      break;
+    case "reminder":
+      let elem = document.getElementById("serverMessages");
+
+      if (msg == "have old session") {
+        elem.innerHTML = "Продолжить предыдущую сессию?";
+      }
+  }
 };
+
+function getSession() {
+  let cookie = getCookie("name");
+  let str = "";
+
+  if (cookie) {
+    str = `{"announce":"cookie", "msg":"${cookie}"}`;
+    console.log("уже есть cookie: " + cookie);
+    sendMessage(str, true);
+  } else {
+    console.log("отправляем запрос на получение новых cookie");
+    str = '{"announce":"cookie", "msg":"needCookie"}';
+    sendMessage(str, true);
+  }
+}
 
 // показать сообщение в div#subscribe
 function showMessage(message) {
@@ -69,6 +114,8 @@ function fillTable(obg) {
   }
   table.innerHTML = "";
   let html = "";
+  let style = "";
+  let buttonSummary = "";
 
   for (let i = 0; i < obg.tsv.length; i++) {
     let tsv = obg.tsv[i];
@@ -83,21 +130,57 @@ function fillTable(obg) {
     let targetConsensus = tsv.Target_consensus;
     let orientation = tsv.Orientation;
 
+    if (i === 0 && obg.tsv.length > 1) {
+      buttonSummary = `<a id="${queryID}" style="text-decoration:none; color:grey;" href="javascript:void(0)" onclick="showAlltargets('${queryID}');" >&#9658; </a>`
+      style = "";
+    } else {
+      style = `class="${queryID}" style="display:none;"`;
+      buttonSummary = `<a style="text-decoration:none;" href=http://jaspar.genereg.net/matrix/${targetID}/ target="_blank">&#8195;&nbsp;</a>`;
+    }
+
     let row = `
-          <tr>
-              <td><a href=http://jaspar.genereg.net/matrix/${targetID}/ target="_blank" >${queryID}</a></td>
-              <td><div class="tooltip">${targetID}<img class="tooltipimage" src="http://jaspar.genereg.net/static/logos/svg/${targetID}.svg"/></div></td>
-              <td>${optimalOffset}</td>
-              <td>${pValue}</td>
-              <td>${eValue}</td>
-              <td>${qValue}</td>
-              <td>${overlap}</td>
-              <td>${queryConsensus}</td>
-              <td>${targetConsensus}</td>
-              <td>${orientation}</td>
+          <tr ${style}>
+              <td nowrap>${buttonSummary}<a href=http://jaspar.genereg.net/matrix/${targetID}/ target="_blank">${queryID}</a></td>
+              <td nowrap><div class="tooltip">${targetID}<img class="tooltipimage" src="http://jaspar.genereg.net/static/logos/svg/${targetID}.svg"/></div></td>
+              <td nowrap>${optimalOffset}</td>
+              <td nowrap>${pValue}</td>
+              <td nowrap>${eValue}</td>
+              <td nowrap>${qValue}</td>
+              <td nowrap>${overlap}</td>
+              <td nowrap>${queryConsensus}</td>
+              <td nowrap>${targetConsensus}</td>
+              <td nowrap>${orientation}</td>
           </tr>`;
     html += row;
   }
-  table.innerHTML = html;
-  //table.append(html);
+  //table.innerHTML = html;
+  table.insertAdjacentHTML('afterend', html);
+}
+
+function showAlltargets(motif) {
+  let elem = document.getElementsByClassName(motif);
+  let href = document.getElementById(motif);
+
+  if (elem[0].style.display == "none") {
+    for (let i = 0; i < elem.length; i++) {
+      document.getElementsByClassName(motif)[i].style.display = "table-row";
+      href.innerHTML = "&#9660; ";
+    }
+  } else {
+    for (let i = 0; i < elem.length; i++) {
+      document.getElementsByClassName(motif)[i].style.display = "none";
+      href.innerHTML = "&#9658; ";
+    }
+  }
+}
+
+function cookieWriter(name, value) {
+  document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value);
+}
+
+function getCookie(name) {
+  let matches = document.cookie.match(new RegExp(
+    "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+  ));
+  return matches ? decodeURIComponent(matches[1]) : undefined;
 }

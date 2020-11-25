@@ -1,9 +1,16 @@
-let WebSocketServer = new require('ws');
+const WebSocketServer = new require('ws');
+const saveSession = 604800; //хранить сессии 7 дней
 
 // подключенные клиенты
 let clients = {};
 // папки на каждый запрос
 let calls = {};
+// очередь
+let round = [];
+// сейчас в работе
+let inWork = [];
+// сохраненные сессии
+let oldSession = {};
 
 function dirCreator(dir) {
     console.log("dirCreator: " + dir);
@@ -86,7 +93,7 @@ function parseTomtom(dir) {
     let fileTsv = tsvJSON(fs.readFileSync(`${dir}/tomtom.tsv`, "utf8"));
     let fileXml = xmlJSON(fs.readFileSync(`${dir}/tomtom.xml`, "utf8"));
 
-    return '{"tsv": ' + JSON.stringify(fileTsv, null, 4) + ', "xml": ' + fileXml + '}';
+    return '{"announce": "tomtom", "msg": {"tsv": ' + JSON.stringify(fileTsv, null, 4) + ', "xml": ' + fileXml + '}}';
 }
 
 function deleteDir(path) {
@@ -121,6 +128,7 @@ function makeRandom(liters) {
 function startJob(motifs, id) {
     let dir = '../meme-5.2.0/apiDir/' + makeRandom(20);
     calls[id].push(dir);
+    inWork.push(motifs);
 
     console.log("new dir: " + calls[id]);
 
@@ -138,8 +146,19 @@ function endJob(dir) {
             if (room[i] === dir) {
                 console.log("endJob: отправляем сообщение на фронт");
                 clients[key].send(tomtom);
+
+                oldSession[key].push(tomtom);
+                setTimeout(() => { delete oldSession[key]; }, saveSession);
             }
         }
+    }
+
+    inWork.pop();
+
+    if (round.length) {
+        let nextMotif = round.pop();
+
+        startJob(nextMotif["message"], nextMotif["id"]);
     }
 
     deleteDir(dir); //удаляем папку после отправки ответа
@@ -149,21 +168,77 @@ function security(str) {
     return /^[atgcwrkdmyhsvbnATGCWRKDMYHSVBN ]+$/.test(str);
 }
 
+function toastmaster(message, id) {
+    if (inWork.length < 10) {
+        startJob(message, id);
+    } else {
+        round.push({ "message": message, "id": id });
+    }
+}
+
+function informQueues() {
+    for (let i in clients) {
+    }
+}
+
+function checkOldSession(id) {
+    if (oldSession[id]) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 // WebSocket-сервер на порту 3000
 let webSocketServer = new WebSocketServer.Server({ port: 3000 });
 webSocketServer.on('connection', function (ws) {
+    let id = "";
+    let str = "";
 
-    let id = makeRandom(20);
-    clients[id] = ws;
-    calls[id] = [];
+    try {
+        str = '{"announce":"session","msg":"true"}';
+        ws.send(str);
+        console.log("Начинаем обмен данными с новым клиентом");
+    } catch (error) {
+        console.log("Ошибка: не удается отправить тестовый запрос");
+    }
 
-    console.log("новое соединение " + id);
+    ws.on('message', function (incomingMessage) {
+        message = JSON.parse(incomingMessage);
+        let announce = message["announce"];
+        let msg = message["msg"];
 
-    ws.on('message', function (message) {
-        if (security(message)) {
-            startJob(message, id);
-        } else {
-            clients[id].send("Error: invalid motive format");
+        switch (announce) {
+            case "tomtom":
+                if (security(msg)) {
+                    calls[id] = [];
+                    oldSession[id] = [];
+                    toastmaster(msg, id);
+                } else {
+                    str = '{"announce":"error","msg":"Error: invalid motive format"}';
+                    clients[id].send(str);
+                }
+                break;
+            case "cookie":
+                if (msg == "needCookie") {
+                    id = makeRandom(20);
+                    str = `{"announce":"cookie", "msg":"${id}"}`;
+                    clients[id] = ws;
+                    ws.send(str);
+                    console.log("новое соединение " + id);
+                } else {
+                    id = msg;
+                    clients[msg] = ws;
+                    console.log("восстановлено соединение " + id);
+
+                    let old = checkOldSession(id);
+
+                    if(old) {
+                        str = '{"announce":"reminder","msg":"have old session"}';
+                        ws.send(str);
+                    }
+                }
+                break;
         }
     });
 
