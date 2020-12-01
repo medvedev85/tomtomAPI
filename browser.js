@@ -2,6 +2,30 @@ if (!window.WebSocket) {
   document.body.innerHTML = 'WebSocket в этом браузере не поддерживается.';
 }
 
+//////////////////для тестов/////////////////////////
+let testMotif = [];
+let roundMotif = [];
+
+function testRound() {
+  let checker = 0;
+
+  for (let i = 0; i < testMotif.length; i++) {
+    for (let j = 0; j < roundMotif.length; j++) {
+      if (testMotif[i] == roundMotif[j]) {
+        checker++;
+        break;
+      }
+    }
+  }
+
+
+  if (checker == testMotif.length) {
+    console.log("очередь отработала как ожидалось, ошибки нет");
+  } else {
+    console.log("что-то не так с очередью!");
+  }
+}
+/////////////////////////////////////////////////////
 let socket = new WebSocket("ws://54.157.128.148:3000");
 let network = false;
 
@@ -34,10 +58,11 @@ function sendMessage(str, sec) {
   if (!network) {
     return alert("подождите, соединение с сервером устанавливается");
   }
-//ИСПРАВИТЬ ПРОВЕРКУ БЕЗОПАСНОСТИ!!!!!
+  //ИСПРАВИТЬ ПРОВЕРКУ БЕЗОПАСНОСТИ!!!!!
   let securityTest = true;//security(str);
 
   if (securityTest || sec) {
+    console.log(str);
     socket.send(str);
   } else {
     alert("а вот хер!");
@@ -47,9 +72,14 @@ function sendMessage(str, sec) {
 function start() {
   let includingMotifs = document.getElementById("createMotifs").value;
   let motifs = createMotifStr(includingMotifs);
+  let requestId = "random requestId " + makeRandomMotif(12);
+
+  //////////////////////////////////
+  testMotif = motifs; //для тестов
+  //////////////////////////////////
 
   for (let i = 0; i < includingMotifs; i++) {
-    let str = `{"announce":"tomtom", "msg":"${motifs}"}`
+    let str = `{"method":"tomtom", "msg":{"requestId": "${requestId}", "motif":"${motifs[i]}"}}`;
     sendMessage(str);
   }
 }
@@ -57,14 +87,16 @@ function start() {
 // обработчик входящих сообщений
 socket.onmessage = function (event) {
   let incomingMessage = JSON.parse(event.data);
-  let announce = incomingMessage["announce"];
+  let method = incomingMessage["method"];
   let msg = incomingMessage["msg"];
 
-  switch (announce) {
+  switch (method) {
     case "error":
       alert(msg);
       break;
     case "tomtom":
+      roundMotif.push(msg.motif); //для тестов
+
       fillTable(msg);
       break;
     case "cookie":
@@ -82,6 +114,8 @@ socket.onmessage = function (event) {
       if (msg == "have old session") {
         elem.innerHTML = "Продолжить предыдущую сессию?";
       }
+      break;
+    default: console.log("неопознанное сообщение: " + incomingMessage);
   }
 };
 
@@ -90,12 +124,12 @@ function getSession() {
   let str = "";
 
   if (cookie) {
-    str = `{"announce":"cookie", "msg":"${cookie}"}`;
+    str = `{"method":"cookie", "msg":"${cookie}"}`;
     console.log("уже есть cookie: " + cookie);
     sendMessage(str, true);
   } else {
     console.log("отправляем запрос на получение новых cookie");
-    str = '{"announce":"cookie", "msg":"needCookie"}';
+    str = '{"method":"cookie", "msg":"needCookie"}';
     sendMessage(str, true);
   }
 }
@@ -107,18 +141,19 @@ function showMessage(message) {
   document.getElementById('subscribe').appendChild(messageElem);
 }
 
-function fillTable(obg) {
+function fillTable(obj) {
   let table = document.getElementById("table_body");
-  if (!table) {
+
+  if (!obj.tsv[0] || !table || document.getElementById(obj.tsv[0].Query_ID)) {
     return;
   }
-  table.innerHTML = "";
+
   let html = "";
   let style = "";
   let buttonSummary = "";
 
-  for (let i = 0; i < obg.tsv.length; i++) {
-    let tsv = obg.tsv[i];
+  for (let i = 0; i < obj.tsv.length; i++) {
+    let tsv = obj.tsv[i];
     let queryID = tsv.Query_ID;
     let targetID = tsv.Target_ID;
     let optimalOffset = tsv.Optimal_offset;
@@ -130,9 +165,10 @@ function fillTable(obg) {
     let targetConsensus = tsv.Target_consensus;
     let orientation = tsv.Orientation;
 
-    if (i === 0 && obg.tsv.length > 1) {
+    if (i === 0 && obj.tsv.length > 1) {
       buttonSummary = `<a id="${queryID}" style="text-decoration:none; color:grey;" href="javascript:void(0)" onclick="showAlltargets('${queryID}');" >&#9658; </a>`
-      style = "";
+    } else if (i === 0 && obj.tsv.length === 1) {
+      buttonSummary = buttonSummary = `<a style="text-decoration:none;" href=http://jaspar.genereg.net/matrix/${targetID}/ target="_blank">&#8195;&nbsp;</a>`;
     } else {
       style = `class="${queryID}" style="display:none;"`;
       buttonSummary = `<a style="text-decoration:none;" href=http://jaspar.genereg.net/matrix/${targetID}/ target="_blank">&#8195;&nbsp;</a>`;
