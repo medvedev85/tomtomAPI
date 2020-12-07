@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>test</title>
+  <script src="modules/taskManager.js"></script>
+</head>
+
+<body>
+  <script>
+    const taskManager = new TaskManager();
+    let testArr = [];
+    let checker = 0;
+
+    function getTests(id, task) {
+      for (let i = 0; i < id; i++) {
+        for (let j = 0; j < task; j++) {
+          testArr.push({i, j})
+          taskManager.setNewTask(i, () => {
+            setTimeout(() => {
+              console.log (`id: ${i+1}`, `task: ${j+1}`);
+              checker--;
+              checkArr(i, j);
+              
+            }, 4000);
+          });
+        }
+      }
+    }
+
+    function checkArr(i, j){
+      for (let k = 0; k < testArr.length; k++) {
+        if (testArr[k].i == i && testArr[k].j == j) {
+          testArr.splice(k, 1);
+        }
+      }
+      if (!testArr.length && !taskManager.queue.length) {
+        console.log("все задачи выполнены!");
+      }
+    }
+
+    tester();
+
+    function tester() {
+      if (checker < 10 && taskManager.queue.length) {
+        taskManager.getTasks(1);
+        checker++;
+      }
+      setTimeout(tester, 200);
+    }
+
+  </script>
+</body>
+
+</html>
