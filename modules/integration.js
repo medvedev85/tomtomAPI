@@ -20,18 +20,18 @@ function execProcess(command, callback) {
   });
 }
 
-function queryCreator(msg, dir) {
+function queryCreator(msg, dir, clients) {
   let motif = msg.motif;
   let str = `../meme-5.2.0/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
-  execProcess(str, () => { requestInTomtom(dir, msg) });
+  execProcess(str, () => { requestInTomtom(dir, msg, clients) });
 }
 
-function requestInTomtom(dir, msg) {
+function requestInTomtom(dir, msg, clients) {
   console.log("функция requestInTomtom запустилась ", dir);
   const fs = require("fs");
   let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
   execProcess(str, () => {
-      endJob(dir, msg);
+      endJob(dir, msg, clients);
       console.log("finished tomtom");
   });
   console.log("создаем tsv и xml файлы");
@@ -122,31 +122,30 @@ function saveSassion(client, requestId, tomtom) {
   client.oldSession.push(obj);
 }
 
-let startJob = function (msg, client) {
+let startJob = function (msg, client, clients) {
   //informQueues();
   let dir = '../meme-5.2.0/apiDir/' + makeRandom(20);
 
   console.log(client)
   client.dirs.push(dir);
-  sessions.threads.push(msg);
 
   dirCreator(dir); //создали папку
-  queryCreator(msg, dir); //создали query_motifs.txt
+  queryCreator(msg, dir, clients); //создали query_motifs.txt
 }
 
-function endJob(dir, msg) {
+function endJob(dir, msg, clients) {
   let motif = msg.motif;
   let requestId = msg.requestId;
   let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
 
-  for (let i = 0; i < sessions.clients.length; i++) {
-      let dirs = sessions.clients[i].dirs;
+  for (let i = 0; i < clients.length; i++) {
+      let dirs = clients[i].dirs;
 
       for (let j = 0; j < dirs.length; j++) {
           if (dirs[j] === dir) {
               console.log("endJob: отправляем сообщение на фронт");
-              sessions.clients[i].ws.send(tomtom);
-              saveSassion(sessions.clients[i], requestId, tomtom);
+              clients[i].ws.send(tomtom);
+              saveSassion(clients[i], requestId, tomtom);
               dirs.splice(j, 1);
           }
       }

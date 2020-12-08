@@ -1,22 +1,19 @@
 const WebSocketServer = new require('ws');
 const TaskManager = require('./modules/taskManager.js');
-const {startJob, makeRandom}  = require('./modules/integration.js');
+const { startJob, makeRandom } = require('./modules/integration.js');
 
 //const sessionExpireMs = 604800000; //хранить сессии 7 дней
-const maxthreads = 10; //сколько можем обрабатывать запросов одновременно
+//const maxthreads = 10; //сколько можем обрабатывать запросов одновременно
 
-let sessions = {
-    clients: [], // все клиенты
-    threads: [], // потоки для tomtom
-    queue: [] // откуда идет отсчет
-};
+const taskManager = new TaskManager(10);
+
+let clients = []; // все клиенты
 
 class Client {
     constructor(ws, id) {
         this.ws = ws;
         this.id = id;
         this.dirs = [];
-        //this.queue = [];
         this.oldSession = [];
         this.visitCounter = 1;
         this.active = true;
@@ -27,16 +24,16 @@ function security(str) {
     return /^[atgcwrkdmyhsvbnATGCWRKDMYHSVBN ]+$/.test(str);
 }
 
-function informQueues() {
-    for (let id in sessions.clients) {
+/*function informQueues() {
+    for (let id in clients) {
         for (let j = 0; j < queue.length; j++) {
             if (id == queue[j]["id"]) {
                 let str = `{"method":"queue","msg":"Ваша позиция в очереди: ${j + maxthreads}, вся очередь: ${queue.length + maxthreads}"}`;
-                sessions.clients[id].send(str);
+                clients[id].send(str);
             }
         }
     }
-}
+}*/
 
 function checkOldSession(client) {
     if (client.oldSession.length) {
@@ -45,6 +42,22 @@ function checkOldSession(client) {
         return false;
     }
 }
+/*
+function getTests(id, task) {
+    for (let i = 0; i < id; i++) {
+        for (let j = 0; j < task; j++) {
+            
+            taskManager.setNewTask(i, () => {
+                setTimeout(() => {
+                    console.log(`id: ${i + 1}`, `task: ${j + 1}`);
+                    //taskManager.runningTasksCount--;
+                    
+                }, 4000);
+            });
+        }
+    }
+}
+getTests(2,2)*/
 
 // WebSocket-сервер на порту 3000
 let webSocketServer = new WebSocketServer.Server({ port: 3000 });
@@ -59,7 +72,7 @@ webSocketServer.on('connection', function (ws) {
         console.log("Начинаем обмен данными с новым клиентом");
     } catch (error) {
         console.log("Ошибка: не удается отправить тестовый запрос");
-        
+
     }
 
     ws.on('message', function (incomingMessage) {
@@ -80,7 +93,11 @@ webSocketServer.on('connection', function (ws) {
             case "tomtom": //сделать реквест (пусть приходит с фронта объединение мотивов в один запрос)
                 if (security(msg.motif)) {
                     //client.queue.push(msg);
-                    startJob(msg, client);
+                    taskManager.setNewTask(client, () => {
+                        console.log(321321321)
+                        startJob(msg, client, clients);
+                    });
+
                 } else {
                     str = '{"method":"error","msg":"Error: invalid motive format"}';
                     client.ws.send(str);
@@ -90,8 +107,8 @@ webSocketServer.on('connection', function (ws) {
                 if (msg == "needCookie") {
                     id = makeRandom(20);
                     client = new Client(ws, id);
-                    
-                    sessions.clients.push(client);
+
+                    clients.push(client);
                     str = `{"method":"cookie", "msg":"${id}"}`;
                     ws.send(str);
                     console.log("новое соединение " + id);
@@ -99,10 +116,10 @@ webSocketServer.on('connection', function (ws) {
                     id = msg;
                     let oldClients = false;
 
-                    for (let i = 0; i < sessions.clients.length; i++) {
-                        if (sessions.clients[i].id == id) {
-                            client = sessions.clients[i];
-                            
+                    for (let i = 0; i < clients.length; i++) {
+                        if (clients[i].id == id) {
+                            client = clients[i];
+
                             client.ws = ws;
                             client.visitCounter++;
                             client.active = true;
@@ -112,7 +129,7 @@ webSocketServer.on('connection', function (ws) {
 
                     if (!oldClients) {
                         client = new Client(ws, id);
-                        sessions.clients.push(client);
+                        clients.push(client);
                     }
 
                     console.log("восстановлено соединение " + id);

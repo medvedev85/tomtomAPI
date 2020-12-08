@@ -1,9 +1,14 @@
-class TaskManager { //добавить коллбек и спрятать геттреадс
-  constructor () {
+class TaskManager { //добавить коллбек и спрятать геттреадс; задачи -промисы, можно подписаться на завершение.
+  constructor(maxRunningTasks) {
+    this.maxRunningTasks = maxRunningTasks;
+    this.runningTasksCount = 0;
     this.clients = [];
     this.queue = [];
+    global.onload = () => {
+      this.taskProcessing();
+    }
   }
-  
+
   setNewTask(id, task) {
     let clients = this.clients;
     let check = false;
@@ -20,6 +25,36 @@ class TaskManager { //добавить коллбек и спрятать гет
       clients.push({ id, tasks });
     }
     this.getThreads();
+  }
+
+  taskProcessing() {
+    const self = this;
+    let count = this.runningTasksCount;
+    let max = this.maxRunningTasks
+    let queue = this.queue;
+
+    if (count < max && queue.length) {
+      let promise = new Promise(function (resolve, reject) {
+        self.runTask();
+        
+        resolve();
+      });
+
+      promise.then(() => {
+        if (count < max && queue.length) {
+          self.runTask();
+        }
+        this.runningTasksCount++;
+      },
+
+        function (error) {
+          console.log(error);
+        }
+      );
+
+      this.runningTasksCount++;
+    }
+    setTimeout(() => { this.taskProcessing() }, 200);
   }
 
   deleteEmptyClients() {
@@ -75,7 +110,7 @@ class TaskManager { //добавить коллбек и спрятать гет
 
   getTask() {
     let clients = this.clients;
-    let task = this.queue.shift();
+    let task = this.queue.pop();
 
     for (let i = 0; i < clients.length; i++) {
       if (task.client == clients[i].id) {
@@ -95,19 +130,36 @@ class TaskManager { //добавить коллбек и спрятать гет
     return task;
   }
 
-  getTasks(amount) {
-    while(amount && this.queue.length) {
-      let task = this.getTask();
+  runTask() {
+    let self = this;
+
+    //run(() => { this.runningTasksCount--; });
+    let promise = new Promise(function (resolve, reject) {
+      let task = self.getTask();
       task.task();
-      amount--;
+      resolve();
+    });
+
+    promise.then(() => {
+      this.runningTasksCount--;
+    },
+
+      function (error) {
+        console.log(error);
+      }
+    );
+
+
+    function run(callback) {
+      let task = self.getTask();
+      task.task();
+      callback();
     }
   }
 }
-/*
-module.exports = {
-  TaskManager: TaskManager
-};
 
+module.exports = TaskManager;
+/*
 
 
  /* {
@@ -133,10 +185,10 @@ module.exports = {
 
 
 
- /* function processNext()
-  {
-    queue;
-    job = queue.getNextTask()
-    job();
-    threadPool...
-  }*/
+/* function processNext()
+ {
+   queue;
+   job = queue.getNextTask()
+   job();
+   threadPool...
+ }*/

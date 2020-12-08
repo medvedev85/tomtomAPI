@@ -9,7 +9,7 @@
 
 <body>
   <script>
-    const taskManager = new TaskManager();
+    const taskManager = new TaskManager(10);
     let testArr = [];
     let checker = 0;
 
@@ -20,9 +20,8 @@
           taskManager.setNewTask(i, () => {
             setTimeout(() => {
               console.log (`id: ${i+1}`, `task: ${j+1}`);
-              checker--;
+              //taskManager.runningTasksCount--;
               checkArr(i, j);
-              
             }, 4000);
           });
         }
@@ -39,17 +38,6 @@
         console.log("все задачи выполнены!");
       }
     }
-
-    tester();
-
-    function tester() {
-      if (checker < 10 && taskManager.queue.length) {
-        taskManager.getTasks(1);
-        checker++;
-      }
-      setTimeout(tester, 200);
-    }
-
   </script>
 </body>
 
