@@ -1,9 +1,12 @@
+const TaskManager = require('./taskManager.js');
+const taskManager = new TaskManager(10);
+
 function dirCreator(dir) {
   console.log("dirCreator: " + dir);
   const fs = require("fs");
 
   if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir);
+    fs.mkdirSync(dir);
   }
 }
 
@@ -12,35 +15,43 @@ function execProcess(command, callback) {
   let process = require("child_process").exec(command);
 
   process.on('exit', () => {
-      console.log("process exited: ", command);
-      if (callback) {
-          console.log("running callback: ");
-          callback();
-      }
+    console.log("process exited: ", command);
+    if (callback) {
+      console.log("running callback: ");
+      callback();
+    }
   });
 }
 
-function queryCreator(msg, dir, clients) {
+function queryCreator(msg, dir, onJobFinished) {
+
   let motif = msg.motif;
   let str = `../meme-5.2.0/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
-  execProcess(str, () => { requestInTomtom(dir, msg, clients) });
-}
+  return () => {
+    return new Promise((resolve, reject) => {
+      function requestInTomtom(dir, msg, onJobFinished) { //должен возвращать функцию, которая возвращает промис
 
-function requestInTomtom(dir, msg, clients) {
-  console.log("функция requestInTomtom запустилась ", dir);
-  const fs = require("fs");
-  let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
-  execProcess(str, () => {
-      endJob(dir, msg, clients);
-      console.log("finished tomtom");
-  });
-  console.log("создаем tsv и xml файлы");
+        console.log("функция requestInTomtom запустилась ", dir);
+        const fs = require("fs");
+        let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
+        execProcess(str, () => {
+          endJob(dir, msg, onJobFinished);
+          console.log("finished tomtom");
+          onJobFinished(); //ЗАЧЕМ ТУТ?
+          resolve();
+        });
+        console.log("создаем tsv и xml файлы");
+      
+      }
+      execProcess(str, () => { requestInTomtom(dir, msg, onJobFinished); });
+    });
+  }
 }
 
 function tsvJSON(inputTsv) {
   if (!inputTsv) {
-      console.log("error: not found tomtom.tsv");
-      return;
+    console.log("error: not found tomtom.tsv");
+    return;
   }
 
   let tsv = inputTsv.slice(0, inputTsv.indexOf("#") - 2);
@@ -48,13 +59,13 @@ function tsvJSON(inputTsv) {
   let headers = lines.shift().split('\t');
 
   return lines.map(line => {
-      let data = line.split('\t');
+    let data = line.split('\t');
 
-      return headers.reduce((obj, nextKey, index) => {
-          obj[nextKey] = data[index];
+    return headers.reduce((obj, nextKey, index) => {
+      obj[nextKey] = data[index];
 
-          return obj;
-      }, {});
+      return obj;
+    }, {});
   });
 }
 
@@ -63,11 +74,11 @@ function xmlJSON(inputXml) {
   let json;
 
   xml2js.parseString(inputXml, (err, result) => {
-      if (err) {
-          throw err;
-      }
+    if (err) {
+      throw err;
+    }
 
-      json = JSON.stringify(result, null, 4);
+    json = JSON.stringify(result, null, 4);
   });
 
   return json;
@@ -85,17 +96,17 @@ function deleteDir(path) {
   const fs = require("fs");
 
   if (fs.existsSync(path)) {
-      fs.readdirSync(path).forEach(function (file) {
-          let curPath = path + "/" + file;
+    fs.readdirSync(path).forEach(function (file) {
+      let curPath = path + "/" + file;
 
-          if (fs.lstatSync(curPath).isDirectory()) {
-              deleteFolderRecursive(curPath);
-          } else {
-              fs.unlinkSync(curPath);
-          }
-      });
+      if (fs.lstatSync(curPath).isDirectory()) {
+        deleteFolderRecursive(curPath);
+      } else {
+        fs.unlinkSync(curPath);
+      }
+    });
 
-      fs.rmdirSync(path);
+    fs.rmdirSync(path);
   }
 };
 
@@ -104,7 +115,7 @@ let makeRandom = function (liters) {
   let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
   for (let i = 0; i < liters; i++) {
-      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
   }
 
   return text;
@@ -113,42 +124,41 @@ let makeRandom = function (liters) {
 function saveSassion(client, requestId, tomtom) {
   let date = new Date();
   let obj = {
-      requestId: requestId,
-      date: date,
-      visitCounter: client.visitCounter,
-      tomtom: tomtom,
+    requestId: requestId,
+    date: date,
+    visitCounter: client.visitCounter,
+    tomtom: tomtom,
   };
 
   client.oldSession.push(obj);
 }
 
-let startJob = function (msg, client, clients) {
-  //informQueues();
+let startJob = function (msg, client, onJobFinished) {
   let dir = '../meme-5.2.0/apiDir/' + makeRandom(20);
 
-  console.log(client)
   client.dirs.push(dir);
 
   dirCreator(dir); //создали папку
-  queryCreator(msg, dir, clients); //создали query_motifs.txt
+  let task = queryCreator(msg, dir, onJobFinished); //создали query_motifs.txt
+  taskManager.setNewTask(client, task);
 }
 
-function endJob(dir, msg, clients) {
+function endJob(dir, msg, clients) { //ВРОДЕ КАК ЭТА ФУНКЦИЯ ОТПРАВЛЯЛА ОТВЕТ ПОЛЬЗОВАТЕЛЮБ ПЕРЕНЕСТИ ЕЕ ЗАДАЧИ В ДР МЕСТО?
   let motif = msg.motif;
   let requestId = msg.requestId;
   let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
 
   for (let i = 0; i < clients.length; i++) {
-      let dirs = clients[i].dirs;
+    let dirs = clients[i].dirs;
 
-      for (let j = 0; j < dirs.length; j++) {
-          if (dirs[j] === dir) {
-              console.log("endJob: отправляем сообщение на фронт");
-              clients[i].ws.send(tomtom);
-              saveSassion(clients[i], requestId, tomtom);
-              dirs.splice(j, 1);
-          }
+    for (let j = 0; j < dirs.length; j++) {
+      if (dirs[j] === dir) {
+        console.log("endJob: отправляем сообщение на фронт");
+        clients[i].ws.send(tomtom);
+        saveSassion(clients[i], requestId, tomtom);
+        dirs.splice(j, 1);
       }
+    }
   }
 
   deleteDir(dir); //удаляем папку после отправки ответа

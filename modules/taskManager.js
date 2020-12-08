@@ -1,12 +1,12 @@
+
+
 class TaskManager { //добавить коллбек и спрятать геттреадс; задачи -промисы, можно подписаться на завершение.
   constructor(maxRunningTasks) {
     this.maxRunningTasks = maxRunningTasks;
     this.runningTasksCount = 0;
     this.clients = [];
     this.queue = [];
-    global.onload = () => {
-      this.taskProcessing();
-    }
+    this.startProcessing();
   }
 
   setNewTask(id, task) {
@@ -26,14 +26,43 @@ class TaskManager { //добавить коллбек и спрятать гет
     }
     this.getThreads();
   }
+// Таск менеджер выполняет промисы, не знает какие приходят задачи синхронные или асинхронные.
+// Он должен вызвать промис оператором (). и подписаться на результат с помощью then, или await. 
+// до вызова увеличивает счетчик активных задач, а после завершения уменьшает.
 
-  taskProcessing() {
+// задача - промис.
+// let task = (ms) => {return new Promise( (resolve, reject) => {
+//   setTimeout(() => { resolve() }, ms);
+// });
+// let taskPromise = task(10000);
+// taskManager.addTask(id, taskPromise);
+
+// ... 
+// let task = nextTask();
+// task().then( () => {... });
+
+  startProcessing() {
     const self = this;
     let count = this.runningTasksCount;
     let max = this.maxRunningTasks
     let queue = this.queue;
 
     if (count < max && queue.length) {
+      this.runTask();
+      this.runningTasksCount++;
+    }
+
+    setTimeout(() => { self.startProcessing() }, 200);
+  }
+
+/*
+  startProcessingOld() {
+    const self = this;
+    let count = this.runningTasksCount;
+    let max = this.maxRunningTasks
+    let queue = this.queue;
+
+    if (count < max && queue.length) { //нахер тут промис?************************************************************
       let promise = new Promise(function (resolve, reject) {
         self.runTask();
         
@@ -44,7 +73,7 @@ class TaskManager { //добавить коллбек и спрятать гет
         if (count < max && queue.length) {
           self.runTask();
         }
-        this.runningTasksCount++;
+        self.runningTasksCount++;
       },
 
         function (error) {
@@ -54,8 +83,9 @@ class TaskManager { //добавить коллбек и спрятать гет
 
       this.runningTasksCount++;
     }
-    setTimeout(() => { this.taskProcessing() }, 200);
+    setTimeout(() => { self.startProcessing() }, 200);
   }
+*/
 
   deleteEmptyClients() {
     let clients = this.clients;
@@ -141,54 +171,14 @@ class TaskManager { //добавить коллбек и спрятать гет
     });
 
     promise.then(() => {
-      this.runningTasksCount--;
+      self.runningTasksCount--;
     },
 
       function (error) {
         console.log(error);
       }
     );
-
-
-    function run(callback) {
-      let task = self.getTask();
-      task.task();
-      callback();
-    }
   }
 }
 
 module.exports = TaskManager;
-/*
-
-
- /* {
-    let id = "job007"; //тесты
-    let testJob = function(delaySec) {
-      setTimeout(() => {
-        console.log("job done: ", id);
-      }, delaySec * 1000);
-    }
-    TaskManager.setNewTask(clientId, () => { job(10); });
-    TaskManager.setNewTask(clientId, job1);
-    TaskManager.setNewTask(clientId, job2);
-    TaskManager.setNewTask(clientId, job3);
-    TaskManager.setNewTask(clientId, job4);
-  }
-  //------------------------------------
-  let parameters = [lalala]; //сервис
-  let tomtomJob = function() {
-    runTomtomScript(parameters);
-  }
-  TaskManager.setNewTask(clientId, tomtomJob);
-//----------------------------------------*/
-
-
-
-/* function processNext()
- {
-   queue;
-   job = queue.getNextTask()
-   job();
-   threadPool...
- }*/
