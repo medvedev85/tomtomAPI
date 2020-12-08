@@ -47,8 +47,10 @@ webSocketServer.on('connection', function (ws) {
         switch (method) {
             case "tomtom": //сделать реквест (пусть приходит с фронта объединение мотивов в один запрос)
                 if (security(msg.motif)) {
+                    let requestId = msg.requestId;
                     let onJobFinished = (tomtom) => {
-                        client.ws.send(tomtom);
+                        client.ws.send(tomtom); //сохранение сессии сюда
+                        saveSession(client, requestId, tomtom);
                     }
                     startJob(msg, client, onJobFinished);
                 } else {

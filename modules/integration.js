@@ -35,13 +35,19 @@ function queryCreator(msg, dir, onJobFinished) {
         const fs = require("fs");
         let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
         execProcess(str, () => {
-          endJob(dir, msg, onJobFinished);
+          let motif = msg.motif;
+          let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
+
+
+
+          deleteDir(dir); //удаляем папку после отправки ответа
+          //endJob(dir, msg, onJobFinished);
           console.log("finished tomtom");
-          onJobFinished(); //ЗАЧЕМ ТУТ?
+          onJobFinished(tomtom); //ЗАЧЕМ ТУТ?
           resolve();
         });
         console.log("создаем tsv и xml файлы");
-      
+
       }
       execProcess(str, () => { requestInTomtom(dir, msg, onJobFinished); });
     });
@@ -121,7 +127,7 @@ let makeRandom = function (liters) {
   return text;
 }
 
-function saveSassion(client, requestId, tomtom) {
+function saveSession(client, requestId, tomtom) {
   let date = new Date();
   let obj = {
     requestId: requestId,
@@ -141,27 +147,6 @@ let startJob = function (msg, client, onJobFinished) {
   dirCreator(dir); //создали папку
   let task = queryCreator(msg, dir, onJobFinished); //создали query_motifs.txt
   taskManager.setNewTask(client, task);
-}
-
-function endJob(dir, msg, clients) { //ВРОДЕ КАК ЭТА ФУНКЦИЯ ОТПРАВЛЯЛА ОТВЕТ ПОЛЬЗОВАТЕЛЮБ ПЕРЕНЕСТИ ЕЕ ЗАДАЧИ В ДР МЕСТО?
-  let motif = msg.motif;
-  let requestId = msg.requestId;
-  let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
-
-  for (let i = 0; i < clients.length; i++) {
-    let dirs = clients[i].dirs;
-
-    for (let j = 0; j < dirs.length; j++) {
-      if (dirs[j] === dir) {
-        console.log("endJob: отправляем сообщение на фронт");
-        clients[i].ws.send(tomtom);
-        saveSassion(clients[i], requestId, tomtom);
-        dirs.splice(j, 1);
-      }
-    }
-  }
-
-  deleteDir(dir); //удаляем папку после отправки ответа
 }
 
 module.exports = {
