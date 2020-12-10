@@ -2,6 +2,7 @@ const WebSocketServer = new require('ws');
 const { startJob, makeRandom } = require('./modules/integration.js');
 const Client = require('./modules/clientConstructor.js');
 const webSocketServer = new WebSocketServer.Server({ port: 3000 });
+
 let clients = []; // все клиенты
 
 function security(str) {

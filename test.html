@@ -4,50 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <title>test</title>
-  <script src="modules/taskManager.js"></script>
+  <script src="test.js"></script>
 </head>
 
 <body>
-  <script>
-    const taskManager = new TaskManager(10);
-    let testArr = [];
-    let checker = 0;
-    let result = "";
-
-    function job(x) {
-      result += x;
-    }
-    function checkResult() {
-      return result == "1:1,1:2,1:3,1:4,1:5";
-    }
-
-    function getTests(id, task) {
-      for (let i = 0; i < id; i++) {
-        for (let j = 0; j < task; j++) {
-          testArr.push({i, j})
-          taskManager.setNewTask(i, () => {
-            setTimeout(() => {
-              console.log (`id: ${i+1}`, `task: ${j+1}`);
-              //taskManager.runningTasksCount--;
-              checkArr(i, j);
-            }, 4000);
-          });
-        }
-      }
-      
-    }
-
-    function checkArr(i, j){
-      for (let k = 0; k < testArr.length; k++) {
-        if (testArr[k].i == i && testArr[k].j == j) {
-          testArr.splice(k, 1);
-        }
-      }
-      if (!testArr.length && !taskManager.queue.length) {
-        console.log("все задачи выполнены!");
-      }
-    }
-  </script>
 </body>
 
 </html>

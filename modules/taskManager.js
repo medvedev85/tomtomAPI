@@ -1,6 +1,4 @@
-
-
-class TaskManager { //добавить коллбек и спрятать геттреадс; задачи -промисы, можно подписаться на завершение.
+class TaskManager {
   constructor(maxRunningTasks) {
     this.maxRunningTasks = maxRunningTasks;
     this.runningTasksCount = 0;
@@ -12,6 +10,7 @@ class TaskManager { //добавить коллбек и спрятать гет
   setNewTask(id, task) {
     let clients = this.clients;
     let check = false;
+    //console.log(this.runningTasksCount)
 
     for (let i = 0; i < clients.length; i++) {
       if (clients[i].id == id) {
@@ -26,20 +25,20 @@ class TaskManager { //добавить коллбек и спрятать гет
     }
     this.getThreads();
   }
-// Таск менеджер выполняет промисы, не знает какие приходят задачи синхронные или асинхронные.
-// Он должен вызвать промис оператором (). и подписаться на результат с помощью then, или await. 
-// до вызова увеличивает счетчик активных задач, а после завершения уменьшает.
+  // Таск менеджер выполняет промисы, не знает какие приходят задачи синхронные или асинхронные.
+  // Он должен вызвать промис оператором (). и подписаться на результат с помощью then, или await. 
+  // до вызова увеличивает счетчик активных задач, а после завершения уменьшает.
 
-// задача - промис.
-// let task = (ms) => {return new Promise( (resolve, reject) => {
-//   setTimeout(() => { resolve() }, ms);
-// });
-// let taskPromise = task(10000);
-// taskManager.addTask(id, taskPromise);
+  // задача - промис.
+  // let task = (ms) => {return new Promise( (resolve, reject) => {
+  //   setTimeout(() => { resolve() }, ms);
+  // });
+  // let taskPromise = task(10000);
+  // taskManager.addTask(id, taskPromise);
 
-// ... 
-// let task = nextTask();
-// task().then( () => {... });
+  // ... 
+  // let task = nextTask();
+  // task().then( () => {... });
 
   startProcessing() {
     const self = this;
@@ -51,53 +50,42 @@ class TaskManager { //добавить коллбек и спрятать гет
       this.runTask();
       this.runningTasksCount++;
     }
+    //console.log(this.runningTasksCount)
 
     setTimeout(() => { self.startProcessing() }, 200);
   }
 
-/*
-  startProcessingOld() {
-    const self = this;
-    let count = this.runningTasksCount;
-    let max = this.maxRunningTasks
-    let queue = this.queue;
-
-    if (count < max && queue.length) { //нахер тут промис?************************************************************
-      let promise = new Promise(function (resolve, reject) {
-        self.runTask();
-        
-        resolve();
-      });
-
-      promise.then(() => {
-        if (count < max && queue.length) {
+  /*
+    startProcessingOld() {
+      const self = this;
+      let count = this.runningTasksCount;
+      let max = this.maxRunningTasks
+      let queue = this.queue;
+  
+      if (count < max && queue.length) { //нахер тут промис?************************************************************
+        let promise = new Promise(function (resolve, reject) {
           self.runTask();
-        }
-        self.runningTasksCount++;
-      },
-
-        function (error) {
-          console.log(error);
-        }
-      );
-
-      this.runningTasksCount++;
-    }
-    setTimeout(() => { self.startProcessing() }, 200);
-  }
-*/
-
-  deleteEmptyClients() {
-    let clients = this.clients;
-
-    for (let i = 0; i < clients.length; i++) {
-      if (!clients[i].tasks.length) {
-        clients.splice(i, 1);
-        this.deleteEmptyClients();
-        break;
+          
+          resolve();
+        });
+  
+        promise.then(() => {
+          if (count < max && queue.length) {
+            self.runTask();
+          }
+          self.runningTasksCount++;
+        },
+  
+          function (error) {
+            console.log(error);
+          }
+        );
+  
+        this.runningTasksCount++;
       }
+      setTimeout(() => { self.startProcessing() }, 200);
     }
-  }
+  */
 
   getClients() {
     let clients = this.clients;
@@ -122,7 +110,7 @@ class TaskManager { //добавить коллбек и спрятать гет
       }
 
       let client = clients[nextStep].id;
-      let task = clients[nextStep].tasks.pop();
+      let task = clients[nextStep].tasks.shift();
 
       if (clients[nextStep].tasks.length < 1) {
         clients.splice(nextStep, 1);
@@ -140,7 +128,7 @@ class TaskManager { //добавить коллбек и спрятать гет
 
   getTask() {
     let clients = this.clients;
-    let task = this.queue.pop();
+    let task = this.queue.shift();
 
     for (let i = 0; i < clients.length; i++) {
       if (task.client == clients[i].id) {
@@ -156,22 +144,18 @@ class TaskManager { //добавить коллбек и спрятать гет
         }
       }
     }
-
     return task;
   }
 
   runTask() {
     let self = this;
+    let task = this.getTask();
+    let taskPromise = task.task();
 
-    //run(() => { this.runningTasksCount--; });
-    let promise = new Promise(function (resolve, reject) {
-      let task = self.getTask();
-      task.task();
-      resolve();
-    });
-
-    promise.then(() => {
+    //console.log(this.runningTasksCount)
+    taskPromise.then(() => {
       self.runningTasksCount--;
+      //console.log(self.runningTasksCount)
     },
 
       function (error) {

@@ -1,5 +1,7 @@
 const TaskManager = require('./taskManager.js');
 const taskManager = new TaskManager(10);
+const _memePath = "/home/ubuntu/meme-5.2.0";
+const _taskDir = "/home/ubuntu/workDir/";
 
 function dirCreator(dir) {
   console.log("dirCreator: " + dir);
@@ -38,12 +40,10 @@ function queryCreator(msg, dir, onJobFinished) {
           let motif = msg.motif;
           let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
 
-
-
           deleteDir(dir); //удаляем папку после отправки ответа
           //endJob(dir, msg, onJobFinished);
           console.log("finished tomtom");
-          onJobFinished(tomtom); //ЗАЧЕМ ТУТ?
+          onJobFinished(tomtom);
           resolve();
         });
         console.log("создаем tsv и xml файлы");
