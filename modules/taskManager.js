@@ -10,15 +10,14 @@ class TaskManager {
 
   startProcessing() {
     const self = this;
-    let queue = this.queue;
-    let max = this.maxRunningTasks;
+    const max = this.maxRunningTasks;
 
-    while (this.runningTasksCount < max && queue.length) {
+    while (this.runningTasksCount < max && this.queue.length) {
       this.runTask();
       this.runningTasksCount++;
     }
 
-    setTimeout(() => { self.startProcessing() }, 200);
+    setTimeout(() => { self.startProcessing() }, 2);
   }
 
   setNewTask(id, task) {
@@ -47,7 +46,7 @@ class TaskManager {
     if (!clients[id].length) {
       delete clients[id];
       queue.splice(this.nextStep, 1);
-      this.nextStep--
+      this.nextStep--;
     }
 
     this.nextStep++;
@@ -58,13 +57,10 @@ class TaskManager {
   runTask() {
     let self = this;
     let task = this.getTask();
-    let taskPromise = new Promise(function (resolve, reject) {
-      setTimeout(task, 3000);
-      resolve();
-    });
+    let taskPromise = task();
 
     taskPromise.then(() => {
-      console.log(self.runningTasksCount);
+      //console.log(self.runningTasksCount);
       self.runningTasksCount--;
     },
 
