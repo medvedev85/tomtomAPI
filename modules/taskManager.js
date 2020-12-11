@@ -1,6 +1,6 @@
 class TaskManager {
   constructor(maxRunningTasks) {
-    this.maxRunningTasks = maxRunningTasks;
+    this.maxRunningTasks = parseInt(maxRunningTasks);
     this.runningTasksCount = 0;
     this.clients = {};
     this.queue = [];
@@ -12,12 +12,12 @@ class TaskManager {
     const self = this;
     const max = this.maxRunningTasks;
 
-    while (this.runningTasksCount < max && this.queue.length) {
+    while ((max == 0 || this.runningTasksCount < max) && this.queue.length) {
       this.runTask();
       this.runningTasksCount++;
     }
 
-    setTimeout(() => { self.startProcessing() }, 2);
+    setTimeout(() => { self.startProcessing() }, 50);
   }
 
   setNewTask(id, task) {
@@ -60,7 +60,6 @@ class TaskManager {
     let taskPromise = task();
 
     taskPromise.then(() => {
-      //console.log(self.runningTasksCount);
       self.runningTasksCount--;
     },
 

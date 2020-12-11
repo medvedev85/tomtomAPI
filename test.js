@@ -14,14 +14,14 @@ function getResult(clientCount, taskCount) {
 
 async function getTests(clientCount, taskCount, maxTaskCount, taskDuration) {
   const taskManager = new TaskManager(maxTaskCount);
+  let timeoutId = -1;
   let expectedResult = getResult(clientCount, taskCount);
   let result = "";
-  let startTime = Date.now();
   let taskInWork = 0;
 
-  let timeoutMs = taskDuration * clientCount * taskCount;
+  let timeoutMs = taskDuration * clientCount * taskCount * 100 + 110000;
   let promise = new Promise(function (res, rej) {
-    setTimeout(() => {
+    timeoutId = setTimeout(() => {
       console.log("timeout!", timeoutMs)
       rej();
     }, timeoutMs);
@@ -30,18 +30,16 @@ async function getTests(clientCount, taskCount, maxTaskCount, taskDuration) {
       for (let j = 0; j < taskCount; j++) {
         let task = () => {
           return new Promise(function (resolve, reject) {
-            console.log("start ", i, j);
+        
             taskInWork++;
 
-            if (taskInWork > maxTaskCount) {
+            if (maxTaskCount >= 1 && taskInWork > maxTaskCount) {
               reject("задач в работе слишком много! ", "В работе: ", taskInWork, " допустимо не больше: ", maxTaskCount);
             }
 
             setTimeout(() => {
               taskInWork--; //+ (оттслеживать вне таскменеджера)
               result += i + "." + j + ", ";
-              let deltat = parseInt((Date.now() - startTime) / 1000);
-              console.log(`${deltat}, id: ${i + 1}`, `task: ${j + 1}`);
 
               resolve();
               if (i == clientCount - 1 && j == taskCount - 1) {
@@ -55,17 +53,30 @@ async function getTests(clientCount, taskCount, maxTaskCount, taskDuration) {
       }
     }
   });
-  console.log("Start")
+  console.log(clientCount, taskCount, maxTaskCount, taskDuration);
   try {
-    await promise;
+    await promise
   } catch(err) {
-    console.log("Failed: ", err)
+    console.log("Failed: ", err);
+  } finally {
+    clearTimeout(timeoutId);
   }
-  console.log("finisheds")
+  let ok = result == expectedResult;
 
-  if (result == expectedResult) {
+  if (ok) {
     console.log("результат ожидаемый");
   } else {
-    console.log("результат получен неверный");
+    console.log("результат получен неверный, ожидаем: ", expectedResult, " получили: ", result);
   }
+  return ok;
+}
+
+async function runAllTests() {
+  await getTests(1, 1, 10, 50);
+  await getTests(1000, 1, 10, 50);
+  await getTests(1000, 1, 1000, 50);
+  await getTests(1, 100, 10, 50);
+  await getTests(1, 1, 10000, 50);
+  await getTests(1, 1, 0, 50);
+  await getTests(100, 100, 10, 0);
 }
