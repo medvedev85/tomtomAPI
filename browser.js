@@ -2,31 +2,8 @@ if (!window.WebSocket) {
   document.body.innerHTML = 'WebSocket в этом браузере не поддерживается.';
 }
 
-//////////////////для тестов/////////////////////////
-let testMotif = [];
-let roundMotif = [];
-
-function testRound() {
-  let checker = 0;
-
-  for (let i = 0; i < testMotif.length; i++) {
-    for (let j = 0; j < roundMotif.length; j++) {
-      if (testMotif[i] == roundMotif[j]) {
-        checker++;
-        break;
-      }
-    }
-  }
-
-
-  if (checker == testMotif.length) {
-    console.log("очередь отработала как ожидалось, ошибки нет");
-  } else {
-    console.log("что-то не так с очередью!");
-  }
-}
-/////////////////////////////////////////////////////
 let socket = new WebSocket("ws://54.157.128.148:3000");
+let requests = {};
 let network = false;
 
 function security(str) {
@@ -54,14 +31,14 @@ function createMotifStr(amt) {
   return str;
 }
 
-function sendMessage(str, sec) {
+function sendMessage(str, potentiallyDangerousStr) {
   if (!network) {
     return alert("подождите, соединение с сервером устанавливается");
   }
-  //ИСПРАВИТЬ ПРОВЕРКУ БЕЗОПАСНОСТИ!!!!!
-  let securityTest = true;//security(str);
 
-  if (securityTest || sec) {
+  let securityTest = (!potentiallyDangerousStr) ? true : security(potentiallyDangerousStr);
+
+  if (securityTest) {
     console.log(str);
     socket.send(str);
   } else {
@@ -74,13 +51,9 @@ function start() {
   let motifs = createMotifStr(includingMotifs);
   let requestId = "random requestId " + makeRandomMotif(12);
 
-  //////////////////////////////////
-  testMotif = motifs; //для тестов
-  //////////////////////////////////
-
   for (let i = 0; i < includingMotifs; i++) {
     let str = `{"method":"tomtom", "msg":{"requestId": "${requestId}", "motif":"${motifs[i]}"}}`;
-    sendMessage(str);
+    sendMessage(str, motifs[i]);
   }
 }
 
@@ -95,8 +68,6 @@ socket.onmessage = function (event) {
       alert(msg);
       break;
     case "tomtom":
-      roundMotif.push(msg.motif); //для тестов
-
       fillTable(msg);
       break;
     case "cookie":
@@ -109,15 +80,30 @@ socket.onmessage = function (event) {
       getSession();
       break;
     case "reminder":
-      let elem = document.getElementById("serverMessages");
-
-      if (msg == "have old session") {
-        elem.innerHTML = "Продолжить предыдущую сессию?";
-      }
+      requests = msg;
+      notifyOldSession(msg);
       break;
     default: console.log("неопознанное сообщение: " + incomingMessage);
   }
 };
+
+function notifyOldSession(oldSession) {
+  let elem = document.getElementById("serverMessages");
+  let html = "previously you searched: ";
+
+  for (let requestId in oldSession) {
+    html = `<a href="javascript:void(0)" onclick="printOldRequest('${requestId}');" >${requestId} (${requestId[0].date}) </a>`
+    html += requestId + "(" + requestId[0].date + ") ";
+  }
+
+  elem.innerHTML = html;
+}
+
+function printOldRequest(requestId) {
+  for (let motif in requests[requestId]) {
+    fillTable(motif);
+  }
+}
 
 function getSession() {
   let cookie = getCookie("name");
@@ -126,11 +112,11 @@ function getSession() {
   if (cookie) {
     str = `{"method":"cookie", "msg":"${cookie}"}`;
     console.log("уже есть cookie: " + cookie);
-    sendMessage(str, true);
+    sendMessage(str);
   } else {
     console.log("отправляем запрос на получение новых cookie");
     str = '{"method":"cookie", "msg":"needCookie"}';
-    sendMessage(str, true);
+    sendMessage(str);
   }
 }
 
@@ -189,7 +175,7 @@ function fillTable(obj) {
           </tr>`;
     html += row;
   }
-  //table.innerHTML = html;
+
   table.insertAdjacentHTML('afterend', html);
 }
 

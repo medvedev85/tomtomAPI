@@ -17,6 +17,19 @@ function checkOldSession(client) {
     }
 }
 
+function saveSession(client, requestId, tomtom) {
+    if (!client.oldSession[requestId]) {
+        client.oldSession[requestId] = [];
+    }
+
+    client.oldSession[requestId].push({
+        date: new Date(date),
+        tomtom: tomtom
+    });
+
+    client.oldSession.length = true;
+}
+
 webSocketServer.on('connection', function (ws) {
     let client;
     let str = "";
@@ -48,11 +61,13 @@ webSocketServer.on('connection', function (ws) {
         switch (method) {
             case "tomtom": //сделать реквест (пусть приходит с фронта объединение мотивов в один запрос)
                 if (security(msg.motif)) {
-                    let requestId = msg.requestId;
                     let onJobFinished = (tomtom) => {
+                        let requestId = msg.requestId;
+
                         client.ws.send(tomtom); //сохранение сессии сюда
                         saveSession(client, requestId, tomtom);
                     }
+
                     startJob(msg, client, onJobFinished);
                 } else {
                     str = '{"method":"error","msg":"Error: invalid motive format"}';
@@ -77,7 +92,7 @@ webSocketServer.on('connection', function (ws) {
                             client = clients[i];
 
                             client.ws = ws;
-                            client.visitCounter++;
+                            //client.visitCounter++;
                             client.active = true;
                             oldClients = true;
                         }
@@ -93,7 +108,7 @@ webSocketServer.on('connection', function (ws) {
                     let old = checkOldSession(client);
 
                     if (old) {
-                        str = '{"method":"reminder","msg":"have old session"}';
+                        str = `{"method":"reminder","msg":"${client.oldSession}"}`;
                         ws.send(str);
                     }
                 }

@@ -1,7 +1,7 @@
-const TaskManager = require('./taskManager.js');
+const TaskManager = require('./taskManager');
 const taskManager = new TaskManager(10);
 const _memePath = "/home/ubuntu/meme-5.2.0";
-const _taskDir = "/home/ubuntu/workDir/";
+const _taskDir = "/home/ubuntu/workDir";
 
 function dirCreator(dir) {
   console.log("dirCreator: " + dir);
@@ -28,14 +28,14 @@ function execProcess(command, callback) {
 function queryCreator(msg, dir, onJobFinished) {
 
   let motif = msg.motif;
-  let str = `../meme-5.2.0/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
+  let str = `${_memePath}/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
   return () => {
     return new Promise((resolve, reject) => {
       function requestInTomtom(dir, msg, onJobFinished) { //должен возвращать функцию, которая возвращает промис
 
         console.log("функция requestInTomtom запустилась ", dir);
         const fs = require("fs");
-        let str = `../meme-5.2.0/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ../meme-5.2.0/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
+        let str = `${_memePath}/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ${_memePath}/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
         execProcess(str, () => {
           let motif = msg.motif;
           let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
@@ -140,7 +140,7 @@ function saveSession(client, requestId, tomtom) {
 }
 
 let startJob = function (msg, client, onJobFinished) {
-  let dir = '../meme-5.2.0/apiDir/' + makeRandom(20);
+  let dir = `${_taskDir}/` + makeRandom(20);
 
   client.dirs.push(dir);
 
