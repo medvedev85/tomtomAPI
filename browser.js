@@ -87,13 +87,17 @@ socket.onmessage = function (event) {
 };
 
 function notifyOldSession(oldSession) {
-  let elem = document.getElementById("serverMessages");
-  let html = "previously you searched: ";
+  let elem = document.getElementById("motifsTableBody");
+  let html = "";
 
   for (let i = 0; i < oldSession.length; i++) {
     let requestId = oldSession[i].requestId;
     let date = oldSession[i].date;
-    html += `<a href="javascript:void(0)" onclick="printOldRequest('${requestId}');" >${requestId}</a> (${date}) `
+
+
+    html += `<tr>	
+                    <td><a href="javascript:void(0)" onclick="printOldRequest('${requestId}');" >${requestId}</a> (${date}) </td>	
+                 </tr>`;
   }
 
   elem.innerHTML = html;
@@ -101,7 +105,7 @@ function notifyOldSession(oldSession) {
 
 function printOldRequest(requestId) {
   let str = `{"method":"requestOld", "msg":"${requestId}"}`;
-  
+
   sendMessage(str);
 }
 
