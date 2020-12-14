@@ -4,7 +4,6 @@ class Client {
       this.id = id;
       this.dirs = [];
       this.oldSession = {};
-      //this.visitCounter = 1;
       this.active = true;
   }
 }

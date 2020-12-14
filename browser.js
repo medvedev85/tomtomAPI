@@ -80,7 +80,6 @@ socket.onmessage = function (event) {
       getSession();
       break;
     case "reminder":
-      requests = msg;
       notifyOldSession(msg);
       break;
     default: console.log("неопознанное сообщение: " + incomingMessage);
@@ -91,18 +90,19 @@ function notifyOldSession(oldSession) {
   let elem = document.getElementById("serverMessages");
   let html = "previously you searched: ";
 
-  for (let requestId in oldSession) {
-    html = `<a href="javascript:void(0)" onclick="printOldRequest('${requestId}');" >${requestId} (${requestId[0].date}) </a>`
-    html += requestId + "(" + requestId[0].date + ") ";
+  for (let i = 0; i < oldSession.length; i++) {
+    let requestId = oldSession[i].requestId;
+    let date = oldSession[i].date;
+    html += `<a href="javascript:void(0)" onclick="printOldRequest('${requestId}');" >${requestId}</a> (${date}) `
   }
 
   elem.innerHTML = html;
 }
 
 function printOldRequest(requestId) {
-  for (let motif in requests[requestId]) {
-    fillTable(motif);
-  }
+  let str = `{"method":"requestOld", "msg":"${requestId}"}`;
+  
+  sendMessage(str);
 }
 
 function getSession() {

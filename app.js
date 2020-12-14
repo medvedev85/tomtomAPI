@@ -1,6 +1,7 @@
 const WebSocketServer = new require('ws');
 const { startJob, makeRandom } = require('./modules/integration.js');
 const Client = require('./modules/clientConstructor.js');
+const { json } = require('express');
 const webSocketServer = new WebSocketServer.Server({ port: 3000 });
 
 let clients = []; // все клиенты
@@ -9,25 +10,55 @@ function security(str) {
     return /^[atgcwrkdmyhsvbnATGCWRKDMYHSVBN ]+$/.test(str);
 }
 
+//https://sequelize.org/ - старый, можно найти поновее
+// nodejs ORM (sequalize)  mongo, postgres, sqlite3, 
+// tables:
+// clients: id, дата последнего входа
+// 1: petya 
+// 2: vasya
+
+
+// requests: id(requestsId), clientId(foreign key), дата создания
+// 1: 1(вася напр.)
+// 2: 1
+// 3: 2
+// 4: 1
+
+
+// results: id, requestId, tomtom, можно добавить время на выполнение запроса
+// 1: 1: {json}
+// 2: 1: {json}
+// .... 
+// 
+
+// один ко многим: client -> request
+// один ко многим: request -> result
+
+// 1-1, 1-n, n-m
+
+// id . db.Clients.find(id) -> db.Request.findByClicentid(clientId) -> db.Results.find(requestId) -> ... {json} -
+//
+
 function checkOldSession(client) {
-    if (client.oldSession.length) {
-        return true;
-    } else {
-        return false;
+    for (let requestId in client.oldSession) {
+        if (client.oldSession[requestId]) {
+            return true
+        }
     }
+    return false;
 }
 
 function saveSession(client, requestId, tomtom) {
+    let date = new Date()
+
     if (!client.oldSession[requestId]) {
         client.oldSession[requestId] = [];
     }
 
     client.oldSession[requestId].push({
-        date: new Date(date),
+        date: date.getDate() + "." + date.getMonth() + "." + date.getFullYear(),
         tomtom: tomtom
     });
-
-    client.oldSession.length = true;
 }
 
 webSocketServer.on('connection', function (ws) {
@@ -41,7 +72,6 @@ webSocketServer.on('connection', function (ws) {
         console.log("Начинаем обмен данными с новым клиентом");
     } catch (error) {
         console.log("Ошибка: не удается отправить тестовый запрос");
-
     }
 
     ws.on('message', function (incomingMessage) {
@@ -59,12 +89,12 @@ webSocketServer.on('connection', function (ws) {
         }
 
         switch (method) {
-            case "tomtom": //сделать реквест (пусть приходит с фронта объединение мотивов в один запрос)
+            case "tomtom":
                 if (security(msg.motif)) {
                     let onJobFinished = (tomtom) => {
                         let requestId = msg.requestId;
 
-                        client.ws.send(tomtom); //сохранение сессии сюда
+                        client.ws.send(tomtom);
                         saveSession(client, requestId, tomtom);
                     }
 
@@ -72,6 +102,14 @@ webSocketServer.on('connection', function (ws) {
                 } else {
                     str = '{"method":"error","msg":"Error: invalid motive format"}';
                     client.ws.send(str);
+                }
+                break;
+            case "requestOld":
+                let requestId = msg;
+
+                for (let i = 0; i < client.oldSession[requestId].length; i++) {
+                    let tomtom = client.oldSession[requestId][i].tomtom;
+                    client.ws.send(tomtom);
                 }
                 break;
             case "cookie":
@@ -108,7 +146,15 @@ webSocketServer.on('connection', function (ws) {
                     let old = checkOldSession(client);
 
                     if (old) {
-                        str = `{"method":"reminder","msg":"${client.oldSession}"}`;
+                        let requests = [];
+
+                        for (let requestId in client.oldSession) {
+                            let date = client.oldSession[requestId][0].date;
+
+                            requests.push({ requestId, date });
+                        }
+
+                        str = `{"method":"reminder","msg":${JSON.stringify(requests)}}`;
                         ws.send(str);
                     }
                 }
