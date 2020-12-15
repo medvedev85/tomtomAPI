@@ -29,29 +29,23 @@ function queryCreator(msg, dir, onJobFinished) {
 
   let motif = msg.motif;
   let str = `${_memePath}/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
-  return () => {
-    return new Promise((resolve, reject) => {
-      function requestInTomtom(dir, msg, onJobFinished) { //должен возвращать функцию, которая возвращает промис
+  function requestInTomtom(dir, msg, onJobFinished) { //должен возвращать функцию, которая возвращает промис
+    console.log("функция requestInTomtom запустилась ", dir);
+    const fs = require("fs");
+    let str = `${_memePath}/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ${_memePath}/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
+    execProcess(str, () => {
+      let motif = msg.motif;
+      let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
 
-        console.log("функция requestInTomtom запустилась ", dir);
-        const fs = require("fs");
-        let str = `${_memePath}/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ${_memePath}/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
-        execProcess(str, () => {
-          let motif = msg.motif;
-          let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
-
-          deleteDir(dir); //удаляем папку после отправки ответа
-          //endJob(dir, msg, onJobFinished);
-          console.log("finished tomtom");
-          onJobFinished(tomtom);
-          resolve();
-        });
-        console.log("создаем tsv и xml файлы");
-
-      }
-      execProcess(str, () => { requestInTomtom(dir, msg, onJobFinished); });
+      deleteDir(dir); //удаляем папку после отправки ответа
+      //endJob(dir, msg, onJobFinished);
+      console.log("finished tomtom");
+      onJobFinished(tomtom);
     });
+    console.log("создаем tsv и xml файлы");
+
   }
+  execProcess(str, () => { requestInTomtom(dir, msg, onJobFinished); });
 }
 
 function tsvJSON(inputTsv) {
@@ -127,26 +121,19 @@ let makeRandom = function (liters) {
   return text;
 }
 
-function saveSession(client, requestId, tomtom) {
-  let date = new Date();
-  let obj = {
-    requestId: requestId,
-    date: date,
-    visitCounter: client.visitCounter,
-    tomtom: tomtom,
-  };
-
-  client.oldSession.push(obj);
-}
-
 let startJob = function (msg, client, onJobFinished) {
-  let dir = `${_taskDir}/` + makeRandom(20);
+  return () => {
+    return new Promise((resolve, reject) => {
+      let dir = `${_taskDir}/` + makeRandom(20);
 
-  client.dirs.push(dir);
+      client.dirs.push(dir);
 
-  dirCreator(dir); //создали папку
-  let task = queryCreator(msg, dir, onJobFinished); //создали query_motifs.txt
-  taskManager.setNewTask(client, task);
+      dirCreator(dir); //создали папку
+      let task = queryCreator(msg, dir, onJobFinished); //создали query_motifs.txt
+      taskManager.setNewTask(client, task);
+      resolve();
+    });
+  }
 }
 
 module.exports = {
