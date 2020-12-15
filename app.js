@@ -90,28 +90,30 @@ webSocketServer.on('connection', function (ws) {
 
         switch (method) {
             case "tomtom":
-                if (security(msg.motif)) {
-                    let onJobFinished = (tomtom) => {
-                        let requestId = msg.requestId;
+                let requestId = msg.requestId;
 
-                        client.ws.send(tomtom);
-                        saveSession(client, requestId, tomtom);
+                for (let i = 0; i < msg.motifs.length; i++) {
+                    let motif = msg.motifs[i];
+                    if (security(motif)) {
+                        let onJobFinished = (tomtom) => {
+                            client.ws.send(tomtom);
+                            saveSession(client, requestId, tomtom);
+                        }
+
+                        startJob(motif, client, onJobFinished);
+                    } else {
+                        str = `{"method":"error","msg":"Error: invalid motive format (${motif})"}`;
+                        client.ws.send(str);
                     }
-
-                    startJob(msg, client, onJobFinished);
-                } else {
-                    str = '{"method":"error","msg":"Error: invalid motive format"}';
-                    client.ws.send(str);
                 }
                 break;
+
             case "requestOld":
-                let requestId = msg;
-
-                for (let i = 0; i < client.oldSession[requestId].length; i++) {
-                    let tomtom = client.oldSession[requestId][i].tomtom;
-                    client.ws.send(tomtom);
-                }
+                requestId = msg.requestId;
+                let requestedSession = client.oldSession[requestId];
+                client.ws.send(requestedSession);
                 break;
+
             case "cookie":
                 if (msg == "needCookie") {
                     id = makeRandom(20);

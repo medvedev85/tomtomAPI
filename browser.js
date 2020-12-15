@@ -6,10 +6,6 @@ let socket = new WebSocket("ws://54.157.128.148:3000");
 let requests = {};
 let network = false;
 
-function security(str) {
-  return /^[atgcwrkdmyhsvbnATGCWRKDMYHSVBN ]+$/.test(str);
-}
-
 function makeRandomMotif(liters) {
   let text = "";
   let possible = "ATGCWRKDMYHSVBN";
@@ -21,40 +17,31 @@ function makeRandomMotif(liters) {
   return text;
 }
 
-function createMotifStr(amt) {
-  let str = [];
+function createTestMotifs(amt) {
+  let motifsArr = [];
 
   for (let i = 0; i < amt; i++) {
-    str.push(makeRandomMotif(8));
+    motifsArr.push(makeRandomMotif(8));
   }
 
-  return str;
+  return motifsArr;
 }
 
-function sendMessage(str, potentiallyDangerousStr) {
+function sendMessage(str) {
   if (!network) {
     return alert("подождите, соединение с сервером устанавливается");
   }
 
-  let securityTest = (!potentiallyDangerousStr) ? true : security(potentiallyDangerousStr);
-
-  if (securityTest) {
-    console.log(str);
-    socket.send(str);
-  } else {
-    alert("а вот хер!");
-  }
+  socket.send(str);
 }
 
 function start() {
   let includingMotifs = document.getElementById("createMotifs").value;
-  let motifs = createMotifStr(includingMotifs);
+  let motifs = createTestMotifs(includingMotifs);
   let requestId = "random requestId " + makeRandomMotif(12);
+  let str = `{"method":"tomtom","msg":{"requestId":"${requestId}","motifs":${JSON.stringify(motifs)}}}`;
 
-  for (let i = 0; i < includingMotifs; i++) {
-    let str = `{"method":"tomtom", "msg":{"requestId": "${requestId}", "motif":"${motifs[i]}"}}`;
-    sendMessage(str, motifs[i]);
-  }
+  sendMessage(str);
 }
 
 // обработчик входящих сообщений
@@ -104,7 +91,7 @@ function notifyOldSession(oldSession) {
 }
 
 function printOldRequest(requestId) {
-  let str = `{"method":"requestOld", "msg":"${requestId}"}`;
+  let str = `{"method":"requestOld", "msg":{"requestId":"${requestId}"}}`;
 
   sendMessage(str);
 }

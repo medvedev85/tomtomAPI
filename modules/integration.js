@@ -25,23 +25,24 @@ function execProcess(command, callback) {
   });
 }
 
-function queryCreator(msg, dir, onJobFinished) {
-
-  let motif = msg.motif;
-  let str = `${_memePath}/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
+function queryCreator(motif, client, onJobFinished) {
   return () => {
     return new Promise((resolve, reject) => {
-      function requestInTomtom(dir, msg, onJobFinished) { //должен возвращать функцию, которая возвращает промис
+      let dir = `${_taskDir}/` + makeRandom(20);
+      client.dirs.push(dir);
+      dirCreator(dir); //создали папку
+      let str = `${_memePath}/scripts/iupac2meme ${motif} > ${dir}/query_motifs`;
+
+      function requestInTomtom(dir, motif, onJobFinished) {
 
         console.log("функция requestInTomtom запустилась ", dir);
         const fs = require("fs");
         let str = `${_memePath}/src/tomtom -no-ssc -oc ${dir} -evalue -dist pearson -thresh 10.0 -time 100 ${dir}/query_motifs ${_memePath}/db/JASPAR/JASPAR2020_CORE_non-redundant_pfms_meme`;
         execProcess(str, () => {
-          let motif = msg.motif;
           let tomtom = parseTomtom(dir, motif); //получили JSON из tomtom.tsv
 
           deleteDir(dir); //удаляем папку после отправки ответа
-          //endJob(dir, msg, onJobFinished);
+          
           console.log("finished tomtom");
           onJobFinished(tomtom);
           resolve();
@@ -49,7 +50,7 @@ function queryCreator(msg, dir, onJobFinished) {
         console.log("создаем tsv и xml файлы");
 
       }
-      execProcess(str, () => { requestInTomtom(dir, msg, onJobFinished); });
+      execProcess(str, () => { requestInTomtom(dir, motif, onJobFinished); });
     });
   }
 }
@@ -127,25 +128,8 @@ let makeRandom = function (liters) {
   return text;
 }
 
-function saveSession(client, requestId, tomtom) {
-  let date = new Date();
-  let obj = {
-    requestId: requestId,
-    date: date,
-    visitCounter: client.visitCounter,
-    tomtom: tomtom,
-  };
-
-  client.oldSession.push(obj);
-}
-
-let startJob = function (msg, client, onJobFinished) {
-  let dir = `${_taskDir}/` + makeRandom(20);
-
-  client.dirs.push(dir);
-
-  dirCreator(dir); //создали папку
-  let task = queryCreator(msg, dir, onJobFinished); //создали query_motifs.txt
+let startJob = function (motif, client, onJobFinished) {
+  let task = queryCreator(motif, client, onJobFinished); //создали query_motifs.txt
   taskManager.setNewTask(client, task);
 }
 
@@ -153,3 +137,12 @@ module.exports = {
   startJob: startJob,
   makeRandom: makeRandom
 };
+
+
+/*
+1)отправка одним запросом всех мотивов                                      готово
+2)добавление в очередь новых реквестid вперед очереди                       в работе
+3)возможность удалить задачи для реквест id
+4)выводить на экран результаты только последнего requestId
+5)размещать в историю запросов недосчитанные (неактивные) requestId
+*/

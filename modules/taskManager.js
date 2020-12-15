@@ -20,7 +20,7 @@ class TaskManager {
     setTimeout(() => { self.startProcessing() }, 50);
   }
 
-  setNewTask(id, task) {
+  setNewTask(id, task) {//добавить возможность изменять порядок добавления (unshift)
     let clients = this.clients;
     let queue = this.queue;
 
@@ -28,7 +28,7 @@ class TaskManager {
       clients[id] = [];
     }
 
-    clients[id].push(task);
+    clients[id].push(task); 
     queue.push(id);
     this.queue = Array.from(new Set(queue));
   }
