@@ -128,9 +128,9 @@ let makeRandom = function (liters) {
   return text;
 }
 
-let startJob = function (motif, client, onJobFinished) {
+let startJob = function (motif, client, requestId, onJobFinished) {
   let task = queryCreator(motif, client, onJobFinished); //создали query_motifs.txt
-  taskManager.setNewTask(client, task);
+  taskManager.setNewTask(client, requestId, task);
 }
 
 module.exports = {
@@ -140,9 +140,8 @@ module.exports = {
 
 
 /*
-1)отправка одним запросом всех мотивов                                      готово
-2)добавление в очередь новых реквестid вперед очереди                       в работе
-3)возможность удалить задачи для реквест id
-4)выводить на экран результаты только последнего requestId
-5)размещать в историю запросов недосчитанные (неактивные) requestId
+2)добавление в очередь новых реквестid вперед очереди                   |    готово (без тестов)
+3)возможность удалить задачи для реквест id                             |    готово (без тестов)
+4)выводить на экран результаты только последнего requestId              |    готово
+5)размещать в историю запросов недосчитанные (неактивные) requestId     |    готово
 */

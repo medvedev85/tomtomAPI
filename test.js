@@ -49,7 +49,7 @@ async function getTests(clientCount, taskCount, maxTaskCount, taskDuration) {
           });
         }
 
-        taskManager.setNewTask(i, task);
+        taskManager.setNewTask(i, 1, task);
       }
     }
   });

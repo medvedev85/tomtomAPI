@@ -100,7 +100,7 @@ webSocketServer.on('connection', function (ws) {
                             saveSession(client, requestId, tomtom);
                         }
 
-                        startJob(motif, client, onJobFinished);
+                        startJob(motif, client, requestId, onJobFinished);
                     } else {
                         str = `{"method":"error","msg":"Error: invalid motive format (${motif})"}`;
                         client.ws.send(str);
@@ -112,6 +112,23 @@ webSocketServer.on('connection', function (ws) {
                 requestId = msg.requestId;
                 let requestedSession = client.oldSession[requestId];
                 client.ws.send(requestedSession);
+                break;
+
+            case "reminderRequest":
+                let old = checkOldSession(client);
+
+                if (old) {
+                    let requests = [];
+
+                    for (let requestId in client.oldSession) {
+                        let date = client.oldSession[requestId][0].date;
+
+                        requests.push({ requestId, date });
+                    }
+
+                    str = `{"method":"reminder","msg":${JSON.stringify(requests)}}`;
+                    ws.send(str);
+                }
                 break;
 
             case "cookie":

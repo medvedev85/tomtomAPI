@@ -7,6 +7,9 @@ let requests = {};
 let network = false;
 
 function makeRandomMotif(liters) {
+  deleteOldResults();
+  reminderRequest();
+
   let text = "";
   let possible = "ATGCWRKDMYHSVBN";
 
@@ -25,6 +28,14 @@ function createTestMotifs(amt) {
   }
 
   return motifsArr;
+}
+
+function deleteOldResults() {
+  let oldTable = document.getElementsByClassName("tableResults");
+
+  for (let i = 0; i < oldTable.length; i++) {
+    oldTable[i].remove();
+  }
 }
 
 function sendMessage(str) {
@@ -72,6 +83,12 @@ socket.onmessage = function (event) {
     default: console.log("неопознанное сообщение: " + incomingMessage);
   }
 };
+
+function reminderRequest() {
+  let str = `{"method":"reminderRequest", "msg":""}`;
+
+  sendMessage(str);
+}
 
 function notifyOldSession(oldSession) {
   let elem = document.getElementById("motifsTableBody");
@@ -152,7 +169,7 @@ function fillTable(obj) {
     }
 
     let row = `
-          <tr ${style}>
+          <tr ${style} class="tableResults">
               <td nowrap>${buttonSummary}<a href=http://jaspar.genereg.net/matrix/${targetID}/ target="_blank">${queryID}</a></td>
               <td nowrap><div class="tooltip">${targetID}<img class="tooltipimage" src="http://jaspar.genereg.net/static/logos/svg/${targetID}.svg"/></div></td>
               <td nowrap>${optimalOffset}</td>
