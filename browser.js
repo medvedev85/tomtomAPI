@@ -7,8 +7,8 @@ let requests = {};
 let network = false;
 
 function makeRandomMotif(liters) {
-  deleteOldResults();
-  reminderRequest();
+  deleteLastResult();
+  requestHistory();
 
   let text = "";
   let possible = "ATGCWRKDMYHSVBN";
@@ -30,7 +30,7 @@ function createTestMotifs(amt) {
   return motifsArr;
 }
 
-function deleteOldResults() {
+function deleteLastResult() {
   let oldTable = document.getElementsByClassName("tableResults");
 
   for (let i = 0; i < oldTable.length; i++) {
@@ -67,6 +67,7 @@ socket.onmessage = function (event) {
       break;
     case "tomtom":
       fillTable(msg);
+      requestHistory();
       break;
     case "cookie":
       cookieWriter("name", msg);
@@ -77,17 +78,36 @@ socket.onmessage = function (event) {
       network = true;
       getSession();
       break;
-    case "reminder":
+    case "history":
       notifyOldSession(msg);
       break;
     default: console.log("неопознанное сообщение: " + incomingMessage);
   }
 };
 
-function reminderRequest() {
-  let str = `{"method":"reminderRequest", "msg":""}`;
+function requestHistory() {
+  let str = `{"method":"requestHistory", "msg":""}`;
 
   sendMessage(str);
+}
+
+function createDelButton(requestId) {
+  let elem = document.getElementById(`session_${requestId}`);
+  let tableSector = document.createElement("td");
+  let button = document.createElement("input");
+  button.type = "button";
+  button.addEventListener('click', () => deleteOldRequest(requestId));
+  button.value = "delete"
+  button.id = "del_" + requestId;
+  elem.append(tableSector);
+  tableSector.append(button);
+}
+
+function createAllDelButtons(oldSession) {
+  for (let i = 0; i < oldSession.length; i++) {
+    let requestId = oldSession[i].requestId;
+    createDelButton(requestId);
+  }
 }
 
 function notifyOldSession(oldSession) {
@@ -99,18 +119,31 @@ function notifyOldSession(oldSession) {
     let date = oldSession[i].date;
 
 
-    html += `<tr>	
-                    <td><a href="javascript:void(0)" onclick="printOldRequest('${requestId}');" >${requestId}</a> (${date}) </td>	
+    html += `<tr id="session_${requestId}">	
+                    <td id="href_${requestId}"><a href="javascript:void(0)" onclick="printOldRequest('${requestId}');" >${requestId}</a> (${date}) </td>	
                  </tr>`;
   }
 
   elem.innerHTML = html;
+  createAllDelButtons(oldSession);
 }
 
 function printOldRequest(requestId) {
+  deleteLastResult();
+
+  //let elem = document.getElementById(`href_${requestId}`);
+  //elem.innerText = requestId;
+
   let str = `{"method":"requestOld", "msg":{"requestId":"${requestId}"}}`;
 
   sendMessage(str);
+}
+
+function deleteOldRequest(requestId) {
+  let str = `{"method":"deleteOldRequest", "msg":{"requestId":"${requestId}"}}`;
+
+  sendMessage(str);
+  requestHistory();
 }
 
 function getSession() {

@@ -37,10 +37,10 @@ class TaskManager {
     }
 
     clients[id].push(requestId);
-    this.clients[id] = Array.from(new Set(this.clients[id]));
+    this.clients[id] = Array.from(new Set(this.clients[id])); //arr.includes(item, from)
 
     queue.push(id);
-    this.queue = Array.from(new Set(this.queue));
+    this.queue = Array.from(new Set(this.queue)); //arr.includes(item, from)
   }
 
   deleteRequestId(id, requestId) {
@@ -67,7 +67,7 @@ class TaskManager {
     let requests = this.requests;
   
     let id = queue[this.nextStep];
-    let requestId = clients[id][clients.length-1];
+    let requestId = clients[id][clients[id].length-1];
     let task = requests[requestId].shift();
 
     if (!requests[requestId].length) {

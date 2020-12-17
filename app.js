@@ -1,7 +1,6 @@
 const WebSocketServer = new require('ws');
 const { startJob, makeRandom } = require('./modules/integration.js');
 const Client = require('./modules/clientConstructor.js');
-const { json } = require('express');
 const webSocketServer = new WebSocketServer.Server({ port: 3000 });
 
 let clients = []; // все клиенты
@@ -49,14 +48,14 @@ function checkOldSession(client) {
 }
 
 function saveSession(client, requestId, tomtom) {
-    let date = new Date()
+    let date = new Date();
 
     if (!client.oldSession[requestId]) {
         client.oldSession[requestId] = [];
     }
 
-    client.oldSession[requestId].push({
-        date: date.getDate() + "." + date.getMonth() + "." + date.getFullYear(),
+    client.oldSession[requestId].unshift({
+        date: date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear(),
         tomtom: tomtom
     });
 }
@@ -78,6 +77,7 @@ webSocketServer.on('connection', function (ws) {
         let message = {};
         let method = "";
         let msg = "";
+        let requestId = "";
 
         try { //переделать на ифы
             message = JSON.parse(incomingMessage);
@@ -90,7 +90,7 @@ webSocketServer.on('connection', function (ws) {
 
         switch (method) {
             case "tomtom":
-                let requestId = msg.requestId;
+                requestId = msg.requestId;
 
                 for (let i = 0; i < msg.motifs.length; i++) {
                     let motif = msg.motifs[i];
@@ -109,12 +109,13 @@ webSocketServer.on('connection', function (ws) {
                 break;
 
             case "requestOld":
+                console.log(msg)
                 requestId = msg.requestId;
                 let requestedSession = client.oldSession[requestId];
-                client.ws.send(requestedSession);
+                client.ws.send(JSON.stringify(requestedSession));
                 break;
 
-            case "reminderRequest":
+            case "requestHistory":
                 let old = checkOldSession(client);
 
                 if (old) {
@@ -126,9 +127,16 @@ webSocketServer.on('connection', function (ws) {
                         requests.push({ requestId, date });
                     }
 
-                    str = `{"method":"reminder","msg":${JSON.stringify(requests)}}`;
+                    str = `{"method":"history","msg":${JSON.stringify(requests)}}`;
                     ws.send(str);
                 }
+                break;
+
+            case "deleteOldRequest":
+                requestId = msg.requestId;
+
+                delete client.oldSession[requestId];
+                
                 break;
 
             case "cookie":
@@ -173,7 +181,7 @@ webSocketServer.on('connection', function (ws) {
                             requests.push({ requestId, date });
                         }
 
-                        str = `{"method":"reminder","msg":${JSON.stringify(requests)}}`;
+                        str = `{"method":"history","msg":${JSON.stringify(requests)}}`;
                         ws.send(str);
                     }
                 }
