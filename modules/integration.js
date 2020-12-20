@@ -1,5 +1,6 @@
 const TaskManager = require('./taskManager');
 const taskManager = new TaskManager(10);
+const makeRandom = require('./common');
 const _memePath = "/home/ubuntu/meme-5.2.0";
 const _taskDir = "/home/ubuntu/workDir";
 
@@ -117,26 +118,12 @@ function deleteDir(path) {
   }
 };
 
-let makeRandom = function (liters) {
-  let text = "";
-  let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-  for (let i = 0; i < liters; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-
-  return text;
-}
-
 let startJob = function (motif, client, requestId, onJobFinished) {
   let task = queryCreator(motif, client, onJobFinished); //создали query_motifs.txt
   taskManager.setNewTask(client, requestId, task);
 }
 
-module.exports = {
-  startJob: startJob,
-  makeRandom: makeRandom
-};
+module.exports = startJob;
 
 
 /*

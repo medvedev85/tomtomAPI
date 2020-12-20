@@ -1,3 +1,38 @@
+/*let testArr = [
+  {
+      request_1: [1, 2, 3],
+      request_2: [1, 2, 3]
+  },
+  {
+      request_1: [1, 2, 3],
+      request_2: [1, 2, 3]
+  }
+]*/
+
+function getTestArr(clientCount, taskCount, requestCount) {
+  let testArr = [];
+
+  for (let i = 0; i < clientCount; i++) {
+    testArr[i] = {};
+
+    for (let j = 0; j < requestCount; j++) {
+      let request = [];
+
+      for (let k = 0; k < taskCount; k++) {
+        request.push(k);
+      }
+
+      testArr[i]["request_" + j] = request;
+    }
+  }
+
+  return testArr;
+}
+
+function getScript() {
+
+}
+
 function getResult(clientCount, taskCount) {
   let expectedResult = "";
 
@@ -49,7 +84,7 @@ async function getTests(clientCount, taskCount, maxTaskCount, taskDuration) {
           });
         }
 
-        taskManager.setNewTask(i, 1, task);
+        taskManager.setNewTask(i, i+"r", task);
       }
     }
   });

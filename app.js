@@ -1,8 +1,9 @@
 const WebSocketServer = new require('ws');
-const { startJob, makeRandom } = require('./modules/integration.js');
-const Client = require('./modules/clientConstructor.js');
+const startJob = require('./modules/integration');
+const Client = require('./modules/clientConstructor');
+const makeRandom = require('./modules/common');
 const webSocketServer = new WebSocketServer.Server({ port: 3000 });
-
+const sequelize = require('./modules/dbConstructor');
 let clients = []; // все клиенты
 
 function security(str) {
@@ -37,6 +38,11 @@ function security(str) {
 
 // id . db.Clients.find(id) -> db.Request.findByClicentid(clientId) -> db.Results.find(requestId) -> ... {json} -
 //
+
+sequelize.sync().then(result=>{
+    console.log(result);
+  })
+  .catch(err=> console.log(err));
 
 function checkOldSession(client) {
     for (let requestId in client.oldSession) {

@@ -30,17 +30,21 @@ class TaskManager {
       requests[requestId] = [];
     }
 
-    this.requests[requestId].push(task);
-
     if (!clients[id]) {
-      clients[id] = [];
+      this.clients[id] = [];
     }
 
-    clients[id].push(requestId);
-    this.clients[id] = Array.from(new Set(this.clients[id])); //arr.includes(item, from)
+    if (!clients[id].includes(requestId, 0)) {
+      this.clients[id].push(requestId);
+    }
 
-    queue.push(id);
-    this.queue = Array.from(new Set(this.queue)); //arr.includes(item, from)
+    if (!queue.includes(id, 0)) {
+      this.queue.push(id);
+      //console.log(id)
+    }
+
+    this.requests[requestId].push(task);
+    
   }
 
   deleteRequestId(id, requestId) {
