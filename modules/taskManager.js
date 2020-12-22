@@ -26,8 +26,8 @@ class TaskManager {
     let queue = this.queue;
     let requests = this.requests;
 
-    if (!requests[requestId]) {
-      requests[requestId] = [];
+    if (!requests[id + requestId]) {
+      requests[id + requestId] = [];
     }
 
     if (!clients[id]) {
@@ -43,13 +43,13 @@ class TaskManager {
       //console.log(id)
     }
 
-    this.requests[requestId].push(task);
+    this.requests[id + requestId].push(task);
     
   }
 
   deleteRequestId(id, requestId) {
-    if (this.requests[requestId]) {
-      delete this.requests[requestId];
+    if (this.requests[id + requestId]) {
+      delete this.requests[id + requestId];
     }
 
     for (let i = 0; i < this.clients[id].length; i++) {
@@ -72,10 +72,10 @@ class TaskManager {
   
     let id = queue[this.nextStep];
     let requestId = clients[id][clients[id].length-1];
-    let task = requests[requestId].shift();
+    let task = requests[id + requestId].shift();
 
-    if (!requests[requestId].length) {
-      delete requests[requestId];
+    if (!requests[id + requestId].length) {
+      delete requests[id + requestId];
       clients[id].splice(clients.length-1, 1);
     }
 
@@ -106,4 +106,4 @@ class TaskManager {
   }
 }
 
-module.exports = TaskManager;
+//module.exports = TaskManager;
